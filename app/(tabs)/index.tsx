@@ -1,21 +1,19 @@
-// ============================================
-// app/(tabs)/index.tsx - ANA SAYFA
-// ============================================
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Pressable } from 'react-native';
 import { useScpData } from '../_layout';
 import { Stack } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useTheme, useFocusEffect } from '@react-navigation/native'; // ✅ useFocusEffect eklendi
+import { useTheme, useFocusEffect } from '@react-navigation/native';
 import { ScpListItem } from './ScpListItem';
+import Feather from '@expo/vector-icons/Feather';
 
 export default function HomeScreen() {
   const scpData = useScpData();
   const { colors } = useTheme();
   const [readStatus, setReadStatus] = useState<boolean[]>(new Array(6000).fill(false));
   const [savedStatus, setSavedStatus] = useState<boolean[]>(new Array(6000).fill(false));
+  const [showUnreadOnly, setShowUnreadOnly] = useState(true)  ; // ✅ Yeni state
 
-  // 🔁 AsyncStorage'dan durumları yükleyen fonksiyon
   const loadStatuses = async () => {
     try {
       const [readJson, savedJson] = await Promise.all([
@@ -33,19 +31,25 @@ export default function HomeScreen() {
     }
   };
 
-  // 📲 Ekran ilk açıldığında verileri yükle
   useEffect(() => {
     loadStatuses();
   }, []);
 
-  // 🎯 SCP detay sayfasından geri dönüldüğünde otomatik yenile
   useFocusEffect(
     useCallback(() => {
       loadStatuses();
     }, [])
   );
 
-  // 🔸 Boş veri kontrolü
+  // ✅ Filtrelenmiş veri
+  const filteredData = showUnreadOnly
+    ? scpData.filter((item) => {
+        const codeNumber = parseInt(item.code.replace('SCP-', ''), 10);
+        const itemIndex = Number.isNaN(codeNumber) ? -1 : codeNumber - 1;
+        return itemIndex >= 0 ? !readStatus[itemIndex] : true;
+      })
+    : scpData;
+
   if (!scpData || scpData.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -64,9 +68,7 @@ export default function HomeScreen() {
     );
   }
 
-  // 🔹 Ana liste
   return (
-    
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Stack.Screen
         options={{
@@ -76,12 +78,35 @@ export default function HomeScreen() {
           headerStyle: { backgroundColor: colors.background },
         }}
       />
-<Text style={[styles.h3, { color: colors.text,  }]}>
+      
+      {/* ✅ Başlık ve Filtre Butonu */}
+      <View style={styles.headerRow}>
+        <Text style={[styles.h3, { color: colors.text }]}>
           Önerilenler
         </Text>
+        <Pressable
+          style={[
+            styles.filterButton,
+            showUnreadOnly && styles.filterButtonActive
+          ]}
+          onPress={() => setShowUnreadOnly(!showUnreadOnly)}
+        >
+          <Feather 
+            name={showUnreadOnly ? "eye-off" : "eye"} 
+            size={18} 
+            color={showUnreadOnly ? "#fff" : colors.text} 
+          />
+          <Text style={[
+            styles.filterButtonText,
+            { color: showUnreadOnly ? "#fff" : colors.text }
+          ]}>
+            {showUnreadOnly ? "Okunmamışlar" : "Tümü"}
+          </Text>
+        </Pressable>
+      </View>
+ <AdBanner /> {/* 👈 banner burada */}
       <FlatList
-      
-        data={scpData}
+        data={filteredData}
         keyExtractor={(item) => item.code}
         renderItem={({ item }) => {
           const codeNumber = parseInt(item.code.replace('SCP-', ''), 10);
@@ -91,14 +116,48 @@ export default function HomeScreen() {
           return <ScpListItem item={item} isRead={isRead} isSaved={isSaved} from='index'/>;
         }}
         contentContainerStyle={styles.listContent}
+        ListEmptyComponent={
+          <Text style={[styles.emptyText, { color: colors.text }]}>
+            Tüm SCP'leri okudunuz! 🎉
+          </Text>
+        }
       />
     </View>
   );
 }
-
+import AdBanner from '../../components/AdBanner';
 const styles = StyleSheet.create({
   container: { flex: 1 },
   listContent: { paddingHorizontal: 15, paddingBottom: 30, paddingTop: 15 },
   emptyText: { textAlign: 'center', marginTop: 40, fontSize: 16 },
-  h3: {textAlign: 'left', fontSize: 20, fontWeight: '600',paddingHorizontal: 15, marginBottom: 10, marginLeft: 4  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    marginBottom: 10,
+    marginTop: 0,
+  },
+  h3: { 
+    fontSize: 20, 
+    fontWeight: '600',
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#48484a',
+  },
+  filterButtonActive: {
+    backgroundColor: '#c0392b',
+    borderColor: '#c0392b',
+  },
+  filterButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
 });

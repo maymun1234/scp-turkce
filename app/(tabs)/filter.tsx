@@ -9,7 +9,8 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useTheme,  useFocusEffect} from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { ScpListItem } from './ScpListItem';
-
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import Feather from '@expo/vector-icons/build/Feather';
 export default function ExploreScreen() {
   const router = useRouter();
   const scpData = useScpData();
@@ -116,6 +117,33 @@ useEffect(() => {
         loadStatuses();
       }, [])
     );
+
+
+  // --- Sınıf ve Okuma Durumu sayacı ---
+const classCounts = useMemo(() => {
+  const counts = { Tümü: scpData.length, Güvenli: 0, Euclid: 0, Keter: 0 };
+  scpData.forEach(item => {
+    const cls = getObjectClass(item.text);
+    if (cls === 'güvenli') counts.Güvenli++;
+    else if (cls === 'euclid') counts.Euclid++;
+    else if (cls === 'keter') counts.Keter++;
+  });
+  return counts;
+}, [scpData]);
+
+const readCounts = useMemo(() => {
+  let okundu = 0, okunmadi = 0;
+  scpData.forEach(item => {
+    const codeNumber = parseInt(item.code.replace('SCP-', ''), 10);
+    const itemIndex = Number.isNaN(codeNumber) ? -1 : codeNumber - 1;
+    if (itemIndex >= 0) {
+      const isRead = readStatus[itemIndex] || false;
+      if (isRead) okundu++; else okunmadi++;
+    }
+  });
+  return { Tümü: scpData.length, Okundu: okundu, Okunmadı: okunmadi };
+}, [scpData, readStatus]);
+
   const filteredData = useMemo(() => {
     let result = scpData;
 
@@ -172,43 +200,48 @@ useEffect(() => {
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* Arama ve Rastgele SCP */}
-      <View style={[styles.searchContainer, { backgroundColor: colors.background }]}>
-        <View style={styles.searchInputWrapper}>
-          <TextInput
-            style={[styles.searchInput, { color: colors.text, borderColor: '#48484a' }]}
-            placeholder="SCP ara... (kod, başlık veya içerik)"
-            placeholderTextColor="#8e8e93"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCorrect={false}
-            autoCapitalize="none"
-          />
-          {searchQuery.length > 0 && (
-            <Pressable style={styles.clearButton} onPress={() => setSearchQuery('')}>
-              <Text style={styles.clearButtonText}>✕</Text>
-            </Pressable>
-          )}
-        </View>
-        <Pressable 
-          style={styles.randomButton}
-          onPress={() => {
-            if (filteredData.length > 0) {
-              const randomIndex = Math.floor(Math.random() * filteredData.length);
-              const randomItem = filteredData[randomIndex];
-              router.push({ 
-  pathname: '/[code]',
-  params: { 
-    code: randomItem.code,
-    scp: JSON.stringify(randomItem),
-    from: 'filter'  // Nereden geldiğini belirt
-  } 
-});
-            }
-          }}
-        >
-          <Text style={styles.randomButtonText}>🎲 Rastgele SCP</Text>
+     <View style={[styles.searchContainer, { backgroundColor: colors.background }]}>
+  <View style={styles.searchRow}>
+    {/* Search Input */}
+    <View style={styles.searchInputWrapper}>
+      <TextInput
+        style={[styles.searchInput, { color: colors.text, borderColor: '#48484a' }]}
+        placeholder="SCP ara... (kod, başlık veya içerik)"
+        placeholderTextColor="#8e8e93"
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        autoCorrect={false}
+        autoCapitalize="none"
+      />
+      {searchQuery.length > 0 && (
+        <Pressable style={styles.clearButton} onPress={() => setSearchQuery('')}>
+          <Text style={styles.clearButtonText}>✕</Text>
         </Pressable>
-      </View>
+      )}
+    </View>
+
+    {/* Random Button */}
+    <Pressable 
+      style={styles.randomButton}
+      onPress={() => {
+        if (filteredData.length > 0) {
+          const randomIndex = Math.floor(Math.random() * filteredData.length);
+          const randomItem = filteredData[randomIndex];
+          router.push({ 
+            pathname: '/[code]',
+            params: { 
+              code: randomItem.code,
+              scp: JSON.stringify(randomItem),
+              from: 'filter'
+            } 
+          });
+        }
+      }}
+    >
+      <FontAwesome5 name="dice" size={24} color="white" />
+    </Pressable>
+  </View>
+</View>
 
       {/* Filtreler - Dropdown */}
       <View style={styles.filterWrapper}>
@@ -220,10 +253,10 @@ useEffect(() => {
               onPress={() => setShowClassDropdown(!showClassDropdown)}
             >
               <Text style={[styles.dropdownButtonText, { color: colors.text }]}>
-                {selectedClass === 'Tümü' ? '📋 Nesne Sınıfı' : `📋 ${selectedClass}`}
+                {selectedClass === 'Tümü' ? '📋 Nesne Sınıfı' : ` ${selectedClass} (${classCounts[selectedClass as keyof typeof classCounts]})`}
               </Text>
               <Text style={[styles.dropdownArrow, { color: colors.text }]}>
-                {showClassDropdown ? '▲' : '▼'}
+                 {showClassDropdown ? <Feather name="chevron-up" size={24} /> : <Feather name="chevron-down" size={24} />}
               </Text>
             </Pressable>
             
@@ -236,24 +269,25 @@ useEffect(() => {
                   else if (cls === 'Euclid') activeColor = '#f1c40f';
                   else if (cls === 'Keter') activeColor = '#e74c3c';
 
-                  return (
-                    <Pressable
-                      key={cls}
-                      style={[
-                        styles.dropdownMenuItem,
-                        isActive && { backgroundColor: activeColor + '22' }
-                      ]}
-                      onPress={() => {
-                        setSelectedClass(cls as any);
-                        setShowClassDropdown(false);
-                      }}
-                    >
-                      <Text style={[styles.dropdownMenuText, { color: isActive ? activeColor : colors.text }]}>
-                        {isActive && '✓ '}{cls}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+                    return (
+    <Pressable
+      key={cls}
+      style={[
+        styles.dropdownMenuItem,
+        isActive && { backgroundColor: activeColor + '22' }
+      ]}
+      onPress={() => {
+        setSelectedClass(cls as any);
+        setShowClassDropdown(false);
+      }}
+    >
+     <Text style={[styles.dropdownMenuText, { color: isActive ? activeColor : colors.text }]}>
+  {isActive && '✓ '}
+  {cls} ({classCounts[cls as keyof typeof classCounts]})
+</Text>
+    </Pressable>
+  );
+})}
               </View>
             )}
           </View>
@@ -265,10 +299,10 @@ useEffect(() => {
               onPress={() => setShowReadDropdown(!showReadDropdown)}
             >
               <Text style={[styles.dropdownButtonText, { color: colors.text }]}>
-                {readFilter === 'Tümü' ? '👁️ Okuma Durumu' : `👁️ ${readFilter}`}
+                {readFilter === 'Tümü' ? '👁️ Okuma Durumu' : ` ${readFilter} (${readCounts[readFilter as keyof typeof readCounts]})`}
               </Text>
               <Text style={[styles.dropdownArrow, { color: colors.text }]}>
-                {showReadDropdown ? '▲' : '▼'}
+                {showReadDropdown ? <Feather name="chevron-up" size={24} /> : <Feather name="chevron-down" size={24} />}
               </Text>
             </Pressable>
             
@@ -290,9 +324,10 @@ useEffect(() => {
                         setShowReadDropdown(false);
                       }}
                     >
-                      <Text style={[styles.dropdownMenuText, { color: isActive ? activeColor : colors.text }]}>
-                        {isActive && '✓ '}{filter}
-                      </Text>
+                     <Text style={[styles.dropdownMenuText, { color: isActive ? activeColor : colors.text }]}>
+  {isActive && '✓ '}
+  {filter} ({readCounts[filter as keyof typeof readCounts]})
+</Text>
                     </Pressable>
                   );
                 })}
@@ -321,15 +356,65 @@ useEffect(() => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  searchContainer: { paddingTop: 50, paddingHorizontal: 15, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: '#3a3a3c' },
-  searchInputWrapper: { position: 'relative', marginBottom: 10 },
-  searchInput: { height: 44, borderWidth: 1, borderRadius: 10, paddingHorizontal: 15, paddingRight: 45, fontSize: 16, backgroundColor: '#1c1c1e' },
-  clearButton: { position: 'absolute', right: 12, top: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', width: 30, height: 44 },
-  clearButtonText: { fontSize: 20, color: '#8e8e93', fontWeight: '600' },
-  randomButton: { backgroundColor: '#c0392b', height: 40, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-  randomButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  filterWrapper: { borderBottomWidth: 1, borderBottomColor: '#3a3a3c', backgroundColor: '#1c1c1e' },
-  filterToggle: { paddingVertical: 12, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center' },
+  searchContainer: { 
+  paddingTop: 50, 
+  paddingHorizontal: 15, 
+  paddingBottom: 15, 
+  borderBottomWidth: 1, 
+  borderBottomColor: '#3a3a3c', 
+  backgroundColor: '#a6a6baff' 
+},
+searchRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 10,
+  marginBottom: 0,
+},
+searchInputWrapper: { 
+  position: 'relative', 
+  flex: 1, // Search input'un kalan alanı kaplaması için
+  
+},
+searchInput: { 
+  height: 44, 
+  width: "100%", // auto yerine 100% 
+  borderWidth: 1, 
+  borderRadius: 10, 
+  paddingHorizontal: 15, 
+  paddingRight: 45, 
+  textAlignVertical: 'center',
+  paddingBottom: 0,
+  paddingTop: 0,
+  fontSize: 16, 
+  backgroundColor: '#1c1c1e' 
+},
+clearButton: { 
+  position: 'absolute', 
+  right: 12, 
+  top: 0, 
+  bottom: 0, 
+  justifyContent: 'center', 
+  alignItems: 'center', 
+  width: 30, 
+  height: 44 
+},
+clearButtonText: { 
+  fontSize: 20, 
+  color: '#8e8e93', 
+  fontWeight: '600' 
+},
+randomButton: { 
+  backgroundColor: '#c0392b', 
+  height: 44, // Search input ile aynı yükseklik
+  width: 44, // Kare buton
+  borderRadius: 8, 
+  justifyContent: 'center', 
+  alignItems: 'center' 
+},
+filterWrapper: {},
+randomButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  
+  filterToggle: {  paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', backgroundColor: '#5454a6ff' },
   filterToggleText: { fontSize: 16, fontWeight: '600' },
   filterContent: { paddingHorizontal: 15, paddingBottom: 15 },
   filterLabel: { fontSize: 13, fontWeight: '600', marginBottom: 8, marginTop: 8, opacity: 0.7 },
@@ -342,7 +427,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     paddingHorizontal: 16,
-    paddingTop: 12, // 👈 Eklendi
+    
   },
   dropdownItem: {
     flex: 1,
@@ -355,7 +440,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 10,
-    borderWidth: 1,
+
     backgroundColor: '#1c1c1e',
   },
   dropdownButtonText: {
@@ -374,6 +459,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     borderRadius: 10,
     borderWidth: 1,
+    
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -385,8 +471,7 @@ const styles = StyleSheet.create({
   dropdownMenuItem: {
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#48484a',
+    
   },
   dropdownMenuText: {
     fontSize: 14,

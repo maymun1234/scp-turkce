@@ -90,6 +90,7 @@ const getClassColor = (objectClass: string): string => {
   if (objectClass === 'güvenli') return '#34c759';
   if (objectClass === 'euclid') return '#f1c40f';
   if (objectClass === 'keter') return '#e74c3c';
+  if (objectClass === 'anormal insan') return '#2b1cafff';
   return '#ffffffff';
 };
 
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     marginTop: 8,
     borderRadius: 0,
-    borderWidth: 1,
+    borderWidth: 0,
     backgroundColor: '#2c2c2e',
     borderColor: '#48484a',
     shadowColor: '#000',
@@ -180,6 +181,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     shadowRadius: 6,
     elevation: 4,
+    borderLeftColor: '#c0392b',
+    borderLeftWidth: 0
   },
   cardTopRow: {
     flexDirection: 'row',

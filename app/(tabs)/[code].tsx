@@ -182,7 +182,7 @@ const [autoMarkRead, setAutoMarkRead] = useState(false);
   useEffect(() => {
   if (autoMarkRead && scpIndex >= 0 && currentItem) {
     // Sayfayı en üste scroll yap
-    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    scrollViewRef.current?.scrollTo({ y: 0, animated: false });
     
     // Biraz gecikme ile işaretle (kullanıcı gerçekten sayfayı açtı mı diye)
     const timer = setTimeout(() => {

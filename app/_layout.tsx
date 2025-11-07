@@ -45,7 +45,7 @@ export default function RootLayout() {
       try {
         console.log("Yerel SCP JSON dosyaları yükleniyor...");
         
-        const rawData: ScpDataRow[] = Array.from({ length: 100 }, (_, i) => {
+        const rawData: ScpDataRow[] = Array.from({ length: 120 }, (_, i) => {
   const key = `SCP${String(i + 1).padStart(3, '0')}`;
   return (SCPs as any)[key];
 });
