@@ -16,7 +16,7 @@
     ],
     "adaptiveIcon": {
       "foregroundImage": "./assets/images/android-icon-foreground.png",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#c0392b"
     },
     "edgeToEdgeEnabled": true,
     "predictiveBackGestureEnabled": false,
@@ -27,6 +27,34 @@
     "favicon": "./assets/images/favicon.png"
   },
   "plugins": [
+    [
+    "expo-quick-actions",
+    {
+      "iosActions": [
+        {
+          "id": "random-scp",
+          "title": "Rastgele SCP",
+          "subtitle": "Rastgele bir SCP aç",
+          "icon": "symbol:shuffle",
+          "params": { "action": "random" }
+        },
+        {
+          "id": "favourites",
+          "title": "Favorilerim",
+          "subtitle": "Kayıtlı SCP'leri görüntüle",
+          "icon": "symbol:heart.fill",
+          "params": { "action": "favourites" }
+        },
+        {
+          "id": "filter",
+          "title": "Filtrele",
+          "subtitle": "SCP'leri filtrele",
+          "icon": "symbol:line.3.horizontal.decrease.circle",
+          "params": { "action": "filter" }
+        }
+      ]
+    }
+  ],
     "expo-router",
     [
       "react-native-google-mobile-ads",
@@ -61,6 +89,7 @@
         }
       }
     ]
+   
   ],
   "experiments": {
     "typedRoutes": true

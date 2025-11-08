@@ -13,6 +13,7 @@ import {
   State,
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
+import AdBanner from '../../components/AdBanner';
 
 // ✔ Kaydetme (Read Status)
 const saveReadStatus = async (list: boolean[]) => {
@@ -35,9 +36,6 @@ const loadReadStatus = async (): Promise<boolean[]> => {
   }
 };
 
-
-
-
 // ✔ Kaydetme (Saved Status)
 const saveSavedStatus = async (list: boolean[]) => {
   try {
@@ -59,37 +57,12 @@ const loadSavedStatus = async (): Promise<boolean[]> => {
   }
 };
 
-// ✔ SCP Verilerini Yükle - BU KISMI KENDİ VERİ KAYNAKINIZA GÖRE DEĞİŞTİRİN
-const loadScpData = async (scpCode: string) => {
-  try {
-    // Seçenek 1: JSON dosyasından yükle
-    // const allData = require('@/data/scp-list.json');
-    // return allData.find((item: any) => item.code === scpCode);
-    
-    // Seçenek 2: AsyncStorage'dan yükle
-    const storedData = await AsyncStorage.getItem('@scpData');
-    if (storedData) {
-      const allData = JSON.parse(storedData);
-      return allData.find((item: any) => item.code === scpCode);
-    }
-    
-    // Seçenek 3: API'den yükle
-    // const response = await fetch(`https://your-api.com/scp/${scpCode}`);
-    // return await response.json();
-    
-    return null;
-  } catch (e) {
-    console.error('SCP verisi yüklenemedi', e);
-    return null;
-  }
-};
-
 export default function ScpDetail() {
   const { scp, from } = useLocalSearchParams();
   const { colors } = useTheme();
   const scrollViewRef = useRef<ScrollView>(null);
   
-    const scpData = useScpData(); // ← ANAHTAR SATIR!
+  const scpData = useScpData();
 
   const [currentItem, setCurrentItem] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -97,64 +70,60 @@ export default function ScpDetail() {
   const [savedStatus, setSavedStatus] = useState<boolean[]>([]);
   const [isRead, setIsRead] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
-
-const [autoMarkRead, setAutoMarkRead] = useState(false);
-
-
-// Sayfa açıldığında otomatik okundu işaretle
-
+  const [autoMarkRead, setAutoMarkRead] = useState(false);
 
   useEffect(() => {
-  const loadAutoMarkRead = async () => {
-    try {
-      const value = await AsyncStorage.getItem('@autoMarkRead');
-      if (value !== null) {
-        setAutoMarkRead(value === 'true');
+    const loadAutoMarkRead = async () => {
+      try {
+        const value = await AsyncStorage.getItem('@autoMarkRead');
+        if (value !== null) {
+          setAutoMarkRead(value === 'true');
+        }
+      } catch (e) {
+        console.error('Otomatik okundu ayarı yüklenemedi', e);
       }
-    } catch (e) {
-      console.error('Otomatik okundu ayarı yüklenemedi', e);
-    }
-  };
-  loadAutoMarkRead();
-}, []);
+    };
+    loadAutoMarkRead();
+  }, []);
+
   // İlk yükleme - parametreden gelen veriyi kullan
-  // İlk yükleme - parametreden gelen veriyi kullan
-
-
-
-  
-  useEffect(() => {
+  useEffect(() => {
     let scpParam: string | null = null;
 
-    // 1. Parametrenin string mi yoksa dizi mi olduğunu kontrol et
     if (Array.isArray(scp)) {
-      scpParam = scp[0]; // Dizi ise ilk elemanı al
+      scpParam = scp[0];
     } else if (typeof scp === 'string') {
-      scpParam = scp; // String ise doğrudan al
+      scpParam = scp;
     }
 
     if (scpParam) {
       try {
-        // 2. Önce JSON olarak parse etmeyi dene (belki tüm veriyi yolladınız)
         const parsedItem = JSON.parse(scpParam);
         setCurrentItem(parsedItem);
       } catch (e) {
-        // 3. Hata alınırsa, bunun bir JSON değil,
-        //    'SCP-173' gibi bir KOD olduğunu varsay ve veriyi yükle.
         console.log("JSON parse hatası, 'loadNewScp' ile yükleniyor:", scpParam);
         loadNewScp(scpParam);
       }
     } else {
       console.error("SCP parametresi bulunamadı.");
-      // Burada bir hata ekranı gösterebilirsiniz
     }
-  }, [scp]); // 'scp' parametresi değiştiğinde bu blok çalışır
+  }, [scp]);
 
-  // Find the SCP index
+  // ✅ currentItem değiştiğinde scroll'u en üste al
+  useEffect(() => {
+    if (currentItem) {
+      // Kısa bir gecikme ile scroll'u en üste al (render tamamlansın diye)
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+      }, 100);
+    }
+  }, [currentItem]);
+
   const scpIndex = currentItem && currentItem.code 
     ? parseInt(currentItem.code.replace(/[^0-9]/g, ''), 10) - 1 
     : -1;
   const scpNumber = scpIndex + 1;
+  const shouldShowAd = scpNumber > 0 && scpNumber % 3 === 0;
 
   // Load read and saved status on mount
   useEffect(() => {
@@ -176,24 +145,17 @@ const [autoMarkRead, setAutoMarkRead] = useState(false);
     }
   }, [readStatus, savedStatus, scpIndex]);
 
-
-
-
+  // Otomatik okundu işaretle
   useEffect(() => {
-  if (autoMarkRead && scpIndex >= 0 && currentItem) {
-    // Sayfayı en üste scroll yap
-    scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-    
-    // Biraz gecikme ile işaretle (kullanıcı gerçekten sayfayı açtı mı diye)
-    const timer = setTimeout(() => {
-      markreadAsRead();
-    }, 1000); // 1 saniye sonra işaretle
+    if (autoMarkRead && scpIndex >= 0 && currentItem) {
+      const timer = setTimeout(() => {
+        markreadAsRead();
+      }, 1000);
 
-    return () => clearTimeout(timer);
-  }
-}, [currentItem, scpIndex, autoMarkRead]);
+      return () => clearTimeout(timer);
+    }
+  }, [currentItem, scpIndex, autoMarkRead]);
 
-  // Toggle read status handler
   const toggleRead = async () => {
     if (scpIndex < 0) return;
     const newStatus = [...readStatus];
@@ -210,7 +172,6 @@ const [autoMarkRead, setAutoMarkRead] = useState(false);
     await saveReadStatus(newStatus);
   };
 
-  // Toggle saved status handler
   const toggleSaved = async () => {
     if (scpIndex < 0) return;
     const newStatus = [...savedStatus];
@@ -219,58 +180,54 @@ const [autoMarkRead, setAutoMarkRead] = useState(false);
     await saveSavedStatus(newStatus);
   };
 
-const loadNewScp = async (newScpCode: string) => {
-  if (!scpData || scpData.length === 0) {
-    console.warn('scpData henüz yüklenmedi');
-    return;
-  }
+  const loadNewScp = async (newScpCode: string) => {
+    if (!scpData || scpData.length === 0) {
+      console.warn('scpData henüz yüklenmedi');
+      return;
+    }
 
-  setIsLoading(true);
-  scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+    setIsLoading(true);
 
-  try {
-    // useScpData'dan direkt bul
-    const found = scpData.find(item => item.code === newScpCode);
+    try {
+      const found = scpData.find(item => item.code === newScpCode);
 
-    if (found) {
-      setCurrentItem(found);
-    } else {
+      if (found) {
+        setCurrentItem(found);
+      } else {
+        setCurrentItem({
+          code: newScpCode,
+          title: 'Bulunamadı',
+          text: `SCP "${newScpCode}" listede yok.\n\nToplam ${scpData.length} SCP yüklendi.`,
+        });
+      }
+    } catch (error) {
+      console.error('SCP bulunurken hata:', error);
       setCurrentItem({
         code: newScpCode,
-        title: 'Bulunamadı',
-        text: `SCP "${newScpCode}" listede yok.\n\nToplam ${scpData.length} SCP yüklendi.`,
+        title: 'Hata',
+        text: 'Bir hata oluştu.',
       });
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error('SCP bulunurken hata:', error);
-    setCurrentItem({
-      code: newScpCode,
-      title: 'Hata',
-      text: 'Bir hata oluştu.',
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
-  // Navigation handlers
   const goToPrevious = () => {
-  
-  if (scpNumber > 1) {
-    const prevNumber = scpNumber - 1;
-    const prevCode = `SCP-${String(prevNumber).padStart(3, '0')}`;
-    loadNewScp(prevCode);
-  }
-};
+    if (scpNumber > 1) {
+      const prevNumber = scpNumber - 1;
+      const prevCode = `SCP-${String(prevNumber).padStart(3, '0')}`;
+      loadNewScp(prevCode);
+    }
+  };
 
-const goToNext = () => {
- 
-  if (scpNumber < 6000) {
-    const nextNumber = scpNumber + 1;
-    const nextCode = `SCP-${String(nextNumber).padStart(3, '0')}`;
-    loadNewScp(nextCode);
-  }
-};
+  const goToNext = () => {
+    if (scpNumber < 6000) {
+      const nextNumber = scpNumber + 1;
+      const nextCode = `SCP-${String(nextNumber).padStart(3, '0')}`;
+      loadNewScp(nextCode);
+    }
+  };
+
   if (!currentItem) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
@@ -290,7 +247,8 @@ const goToNext = () => {
   if (/güvenli|safe/i.test(objectClass)) classColor = '#34c759';
   else if (/euclid|öklid/i.test(objectClass)) classColor = '#ffd60a';
   else if (/keter|tehlikeli/i.test(objectClass)) classColor = '#ff3b30';
-const navigation = useNavigation();
+
+  const navigation = useNavigation();
   const cleanedText = rawText
     .replace(/^Öğe|Madde\s*#:\s*SCP-\d+\s*/i, '')
     .replace(/^Item\s*#:\s*SCP-\d+\s*/i, '')
@@ -315,25 +273,22 @@ const navigation = useNavigation();
             fontWeight: 'bold',
             fontSize: 18,
           },
-          
-
-headerLeft: () => (
-  <Pressable 
-    onPress={() => {
-      // Hangi sayfadan geldiğine göre geri dön
-      if (from === 'filter') {
-        router.push('/filter');
-      } else if (from === 'favourites') {
-        router.push('/favourites');
-      } else {
-        router.push('/');
-      }
-    }}
-    style={{ paddingLeft: 12 }}
-  >
-    <MaterialIcons name="arrow-back-ios" size={24} color={colors.text} />
-  </Pressable>
-),
+          headerLeft: () => (
+            <Pressable 
+              onPress={() => {
+                if (from === 'filter') {
+                  router.push('/filter');
+                } else if (from === 'favourites') {
+                  router.push('/favourites');
+                } else {
+                  router.push('/');
+                }
+              }}
+              style={{ paddingLeft: 12 }}
+            >
+              <MaterialIcons name="arrow-back-ios" size={24} color={colors.text} />
+            </Pressable>
+          ),
         }}
       />
       
@@ -377,7 +332,8 @@ headerLeft: () => (
             )}
           </View>
         </View>
-        
+        {/* {shouldShowAd && <AdBanner />} */}
+       
         <View style={styles.contentCard}>
           <View style={styles.contentHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -437,15 +393,12 @@ headerLeft: () => (
           </Pressable>
         )}
 
-        {/* Navigation Buttons */}
         <View style={styles.navigationContainer}>
           <Pressable 
             style={[styles.navButton, scpNumber <= 1 && styles.navButtonDisabled]}
             onPress={goToPrevious}
             disabled={scpNumber <= 1 || isLoading}
           >
-            
-            
             <Feather name="arrow-left" size={20} color="#c0392b" />
             <Text style={styles.navButtonText}>Önceki</Text>
           </Pressable>
@@ -457,7 +410,6 @@ headerLeft: () => (
           >
             <Text style={styles.navButtonText}>Sonraki</Text>
             <Feather name="arrow-right" size={20} color="#c0392b" />
-           
           </Pressable>
         </View>
       </ScrollView>
@@ -530,13 +482,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   contentCard: {
-    
     borderRadius: 12,
     padding: 16,
     paddingHorizontal: 0,
     marginBottom: 12,
     borderWidth: 1,
-    
   },
   contentHeader: {
     flexDirection: 'row',
@@ -569,11 +519,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    
   },
   readButtonActive: {
     backgroundColor: 'transparent',
-    
   },
   readButtonText: {
     color: '#ffffff',

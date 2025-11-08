@@ -104,10 +104,12 @@ export default function HomeScreen() {
           </Text>
         </Pressable>
       </View>
- <AdBanner /> {/* 👈 banner burada */}
+
       <FlatList
+      
         data={filteredData}
         keyExtractor={(item) => item.code}
+       // ListHeaderComponent={<AdBanner />}
         renderItem={({ item }) => {
           const codeNumber = parseInt(item.code.replace('SCP-', ''), 10);
           const itemIndex = Number.isNaN(codeNumber) ? -1 : codeNumber - 1;

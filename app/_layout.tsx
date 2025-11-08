@@ -4,6 +4,9 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import * as SCPs from './assets/scp_jsons';
 
+import { router } from 'expo-router';
+import * as QuickActions from 'expo-quick-actions';
+import { Platform } from 'react-native';
 
 // Uygulama başında bir kez çalıştır
 //initializeApp();
@@ -39,13 +42,43 @@ const CustomDarkTheme = {
 export default function RootLayout() {
   const [appIsReady, setAppIsReady] = useState(false);
   const [scpData, setScpData] = useState<ScpDataRow[]>([]); 
+  useEffect(() => {
+    // Sadece Android'de çalışsın
+    if (Platform.OS !== 'android') return;
 
+    // Kısayol tıklamalarını dinle
+    const subscription = QuickActions.addListener((action) => {
+      console.log('Quick Action:', action);
+      
+      switch (action.params?.action) {
+        case 'random':
+          // Rastgele SCP'ye git
+          const randomNum = Math.floor(Math.random() * 6000) + 1;
+          const randomCode = `SCP-${String(randomNum).padStart(3, '0')}`;
+          router.push({
+            pathname: '/(tabs)/[code]',
+            params: { code: randomCode, from: 'shortcut' }
+          });
+          break;
+          
+        case 'favourites':
+          router.push('/(tabs)/favourites');
+          break;
+          
+        case 'filter':
+          router.push('/(tabs)/filter');
+          break;
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
   useEffect(() => {
     async function prepare() {
       try {
         console.log("Yerel SCP JSON dosyaları yükleniyor...");
         
-        const rawData: ScpDataRow[] = Array.from({ length: 120 }, (_, i) => {
+        const rawData: ScpDataRow[] = Array.from({ length: 200 }, (_, i) => {
   const key = `SCP${String(i + 1).padStart(3, '0')}`;
   return (SCPs as any)[key];
 });
