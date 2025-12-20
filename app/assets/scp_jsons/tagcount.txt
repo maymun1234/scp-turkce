@@ -1,0 +1,79 @@
+import os
+import json
+from collections import Counter
+
+# ==========================================
+# AYARLAR (Senin yolunu buraya sabitledim)
+# ==========================================
+# Windows yollarında hata olmaması için başına 'r' koyuyoruz.
+KLASOR_YOLU = r"C:\Users\BercanAyd\Desktop\web\scp\scp-turkce\app\assets\scp_jsons"
+
+# Sistem taglarını (örn: _licensebox, _cc) gizle
+SISTEM_TAGLARINI_GIZLE = True 
+
+def main():
+    tag_counter = Counter()
+    json_dosya_sayisi = 0
+    
+    print(f"Taranan Klasör: {KLASOR_YOLU}")
+    print("Dosyalar aranıyor...\n")
+
+    # os.walk kullanarak tüm alt klasörleri de tarar (Garanti çözüm)
+    for root, dirs, files in os.walk(KLASOR_YOLU):
+        # node_modules veya .git gibi gereksiz klasörleri atla
+        if 'node_modules' in root or '.git' in root:
+            continue
+
+        for dosya_adi in files:
+            # Büyük/küçük harf duyarsız kontrol (.json veya .JSON)
+            if dosya_adi.lower().endswith('.json'):
+                dosya_yolu = os.path.join(root, dosya_adi)
+                json_dosya_sayisi += 1
+                
+                try:
+                    with open(dosya_yolu, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        
+                        # Tags bazen string, bazen liste, bazen boş gelebilir; kontrol edelim.
+                        tags_raw = data.get('tags', "")
+                        
+                        tags_list = []
+                        if isinstance(tags_raw, str):
+                            tags_list = tags_raw.split()
+                        elif isinstance(tags_raw, list):
+                            tags_list = tags_raw
+                        
+                        if tags_list:
+                            # Filtreleme
+                            if SISTEM_TAGLARINI_GIZLE:
+                                tags_list = [t for t in tags_list if not str(t).startswith('_')]
+                            
+                            tag_counter.update(tags_list)
+                            
+                except Exception as e:
+                    # Okunamayan dosya olursa akışı bozmasın, sadece atlasın
+                    pass
+
+    if json_dosya_sayisi == 0:
+        print("HATA: Belirtilen klasörde hiç .json dosyası bulunamadı!")
+        print(f"Lütfen şu yolda .json dosyaları olduğundan emin ol: {KLASOR_YOLU}")
+        return
+
+    print(f"Toplam {json_dosya_sayisi} dosya analiz edildi.")
+    
+    # --- SONUÇLARI YAZDIR ---
+    print("\n" + "="*45)
+    print(f"{'EN ÇOK KULLANILAN 20 ETİKET':^45}")
+    print("="*45)
+    print(f"{'SIRA':<6} {'ETİKET ADI':<25} {'ADET'}")
+    print("-" * 45)
+
+    top_20 = tag_counter.most_common(20)
+
+    for i, (tag, count) in enumerate(top_20, 1):
+        print(f"{i:<6} {tag:<25} {count}")
+
+    print("-" * 45)
+
+if __name__ == "__main__":
+    main()

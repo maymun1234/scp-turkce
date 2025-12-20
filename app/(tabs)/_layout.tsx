@@ -1,13 +1,21 @@
 // app/(tabs)/_layout.tsx
-import React, { useState } from 'react';
-import { Tabs } from 'expo-router';
 import { HapticTab } from '@/components/haptic-tab';
 import Feather from '@expo/vector-icons/Feather';
+import { Tabs } from 'expo-router';
+import React, { useState } from 'react';
+
 
 export default function Layout() {
   const [activeTab, setActiveTab] = useState<'index' | 'filter' | 'favourites' | 'settings'>('index');
 
+
+
+
+  
   return (
+
+
+    
     <Tabs
       screenOptions={{
         headerShown: true,
@@ -15,11 +23,16 @@ export default function Layout() {
         headerTitleStyle: {
           fontWeight: 'bold',
           fontSize: 24,
+          borderTopWidth: 2,
+        },
+        headerStyle: {
+          backgroundColor: '#1c1c1e',
         },
         tabBarButton: HapticTab,
         tabBarShowLabel: false,
         tabBarStyle: {
           justifyContent: 'center',
+         
         },
       }}
     >
@@ -100,6 +113,22 @@ export default function Layout() {
         name="[code]"
         options={{
           href: null, // Tab bar'da gösterme
+          headerShown: true, // Kendi header'ını kullanacak
+        }}
+      />
+
+      <Tabs.Screen
+        name="scpidcard"
+        options={{
+          href: null, // Tab bar'da gösterme
+          headerShown: true, // Kendi header'ını kullanacak
+        }}
+      />
+
+      <Tabs.Screen
+        name="forum"
+        options={{
+        href: null, // Tab bar'da gösterme
           headerShown: true, // Kendi header'ını kullanacak
         }}
       />

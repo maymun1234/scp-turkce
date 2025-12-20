@@ -1,19 +1,19 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
-import * as SCPs from './assets/scp_jsons';
-
-import { router } from 'expo-router';
+import { DarkTheme, ThemeProvider } from '@react-navigation/native';
+import { useFonts } from 'expo-font';
 import * as QuickActions from 'expo-quick-actions';
+import { router, Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { Platform } from 'react-native';
-
+import 'react-native-reanimated';
+import { CONFIG } from '../constants/config';
+import * as SCPs from './assets/scp_jsons';
 // Uygulama başında bir kez çalıştır
 //initializeApp();
-import React, { useEffect, useState, useCallback, createContext, useContext } from 'react';
-import { ScpDataRow } from '../types/scp';
-import { View } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { View } from 'react-native';
+import { ScpDataRow } from '../types/scp';
+
 
 // Splash screen'i hemen gizlemeyi engelle
 SplashScreen.preventAutoHideAsync();
@@ -39,7 +39,30 @@ const CustomDarkTheme = {
   },
 };
 
+
+
+
+
+
 export default function RootLayout() {
+const fonturl= '../assets/fonts/inter/Inter_18pt-';
+const [loaded, error] = useFonts({
+    'Inter-Regular': require('../assets/fonts/inter/Inter_18pt-Regular.ttf'),
+    'Inter-Bold': require('../assets/fonts/inter/Inter_18pt-Bold.ttf'),
+    'Inter-Black': require('../assets/fonts/inter/Inter_18pt-Black.ttf'),
+
+   
+  });
+
+useEffect(() => {
+    if (loaded || error) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded, error]);
+
+ 
+
+
   const [appIsReady, setAppIsReady] = useState(false);
   const [scpData, setScpData] = useState<ScpDataRow[]>([]); 
   useEffect(() => {
@@ -73,12 +96,16 @@ export default function RootLayout() {
 
     return () => subscription.remove();
   }, []);
+
+
+
+  
   useEffect(() => {
     async function prepare() {
       try {
         console.log("Yerel SCP JSON dosyaları yükleniyor...");
         
-        const rawData: ScpDataRow[] = Array.from({ length: 200 }, (_, i) => {
+        const rawData: ScpDataRow[] = Array.from({ length: CONFIG.TOTAL_SCP_COUNT }, (_, i) => {
   const key = `SCP${String(i + 1).padStart(3, '0')}`;
   return (SCPs as any)[key];
 });
@@ -116,6 +143,9 @@ export default function RootLayout() {
   }, []);
 
   const onLayoutRootView = useCallback(async () => {
+     if (!loaded && !error) {
+    return null;
+  }
     if (appIsReady) {
       await SplashScreen.hideAsync();
     }

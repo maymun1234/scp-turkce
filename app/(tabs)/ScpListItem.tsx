@@ -1,13 +1,13 @@
 // components/ScpListItem.tsx
-import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useTheme } from '@react-navigation/native';
-import { ScpDataRow } from '../../types/scp';
-import Feather from '@expo/vector-icons/Feather';
 import Entypo from '@expo/vector-icons/Entypo';
+import Feather from '@expo/vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import { useTheme } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
+import React from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { logSCPView } from '../../services/scplog';
+import { ScpDataRow } from '../../types/scp';
 interface ScpListItemProps {
   item: ScpDataRow;
   isRead: boolean;
@@ -57,8 +57,9 @@ const getObjectClass = (text: string | undefined): string => {
     if (match) {
       const cls = match[1].toLowerCase();
       if (cls.includes('güvenli') || cls.includes('safe')) return 'güvenli';
-      if (cls.includes('euclid')) return 'euclid';
+      if (cls.includes('euclid') || cls.includes('öklid')) return 'euclid';
       if (cls.includes('keter') || cls.includes('tehlikeli')) return 'keter';
+      
       return cls;
     }
   }
@@ -68,21 +69,42 @@ const getObjectClass = (text: string | undefined): string => {
 // 📝 Metinden önizleme oluştur
 const getPreviewText = (text: string | undefined): string => {
   if (!text) return 'Açıklama yok.';
-  
-  let cleaned = text
-    .replace(/^Öğe|Madde|Madde No|No:\s*#:\s*SCP-\d+\s*/i, '')
-    .replace(/^Item\s*#:\s*SCP-\d+\s*/i, '')
-    .replace(/Nesne\s*Sınıfı:\s*[^\n]+\n?/i, '')
-    .replace(/#:\s*SCP-\d+/gi, '')
-    .replace(/«\s*SCP-\d+\s*\|\s*SCP-\d+\s*\|\s*SCP-\d+\s*»/gi, '')
+
+  let processed = text;
+
+  // ADIM 1: "Açıklama" (Description) kısmını bulmaya çalış.
+  // Kullanıcılar "Karanlık odada saklayın" yazısını değil, hikayeyi merak eder.
+  const descriptionMatch = processed.match(/(?:Açıklama|Description)\s*:\s*([\s\S]*)/i);
+
+  if (descriptionMatch && descriptionMatch[1]) {
+    // Açıklama başlığını bulduk, öncesindeki her şeyi (Prosedürler, Sınıf vb.) atıyoruz.
+    processed = descriptionMatch[1];
+  } else {
+    // Açıklama başlığı yoksa, klasik yöntemle baştaki teknik terimleri siliyoruz.
+    processed = processed
+      .replace(/(Madde|Öğe|Item|Madde No)\s*(#|No)?\s*:?\s*SCP-\d+\s*/gi, '')
+      .replace(/(Nesne|Object)\s*(Sınıfı|Class)\s*:?\s*[\w-]+\s*/gi, '')
+      .replace(/(Özel|Special)\s*(Saklama|Containment)\s*(Prosedürleri|Procedures)\s*:?/gi, '');
+  }
+
+  // ADIM 2: Altbilgileri, Linkleri ve Navigasyonu Temizle
+  processed = processed
+    // Navigasyon oklarını sil (« SCP-011 | SCP-012 ... »)
+    .replace(/«[\s\S]*?»/g, '') 
+    // Alt kısımdaki Lisans, Kaynak ve Alıntı metinlerini, oradan başlayarak sonuna kadar sil
+    .replace(/(Bu sayfayı|Lisans|Wiki içeriği|Kaynak|Daha fazla bilgi için).*$/si, '')
+    // URL'leri temizle
+    .replace(/https?:\/\/[^\s]+/g, '')
+    // Fazla boşlukları ve satır başlarını tek boşluğa indir
     .replace(/\s+/g, ' ')
     .trim();
 
-  if (cleaned.length > 150) {
-    cleaned = cleaned.substring(0, 150) + '...';
+  // ADIM 3: Kısaltma (Truncate)
+  if (processed.length > 150) {
+    return processed.substring(0, 150).trim() + '...';
   }
-  
-  return cleaned || 'Açıklama yok.';
+
+  return processed || 'Açıklama yok.';
 };
 
 // 🎨 Sınıfa göre renk
@@ -91,7 +113,8 @@ const getClassColor = (objectClass: string): string => {
   if (objectClass === 'euclid') return '#f1c40f';
   if (objectClass === 'keter') return '#e74c3c';
   if (objectClass === 'anormal insan') return '#2b1cafff';
-  return '#ffffffff';
+  
+  return '#9b59b6';
 };
 
 export const ScpListItem = ({ item, isRead, isSaved, from = 'index' }: ScpListItemProps) => {
@@ -103,6 +126,7 @@ export const ScpListItem = ({ item, isRead, isSaved, from = 'index' }: ScpListIt
   const codeColor = getClassColor(objectClass);
 
   const handlePress = () => {
+    logSCPView(item.code, from);
     router.push({
       pathname: "/[code]",
       params: {
@@ -170,12 +194,13 @@ export const ScpListItem = ({ item, isRead, isSaved, from = 'index' }: ScpListIt
 const styles = StyleSheet.create({
   itemContainer: {
     padding: 16,
-    marginBottom: 14,
+    marginBottom: 10,
+
     marginTop: 8,
     borderRadius: 0,
     borderWidth: 0,
-    backgroundColor: '#2c2c2e',
-    borderColor: '#48484a',
+     backgroundColor: '#1c1c1e',
+    borderColor: '#343435ff',
     shadowColor: '#000',
     shadowOpacity: 0.3,
     shadowOffset: { width: 0, height: 3 },
@@ -190,6 +215,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   itemTitle: {
+    fontFamily: 'Inter-Bold',
     fontSize: 18,
     fontWeight: '600',
     flex: 1,
@@ -200,10 +226,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     flexShrink: 0,
+    // 👇 EKLENEN: Kod alanı için minimum bir genişlik veriyoruz ki sıkışmasın.
+    minWidth: 70, 
+    justifyContent: 'flex-end', // Kısa kodlar (SCP-173) sağa yaslı dursun
   },
   itemCode: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 15,
+       // 👇 EKLENEN: Android'de dikey hizalama ve kesilmeyi önlemek için
+    includeFontPadding: false, 
+    textAlignVertical: 'center',
+    // 👇 EKLENEN: Sağ taraftan çok hafif bir boşluk bırakıyoruz ki son harf kesilmesin
+    paddingRight: 2, 
   },
   itemPreview: {
     fontSize: 14,

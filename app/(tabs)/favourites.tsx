@@ -1,14 +1,14 @@
 // ============================================
 // app/(tabs)/favourites.tsx - ARŞİV (Favoriler)
 // ============================================
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, StatusBar } from 'react-native';
-import { useScpData } from '../_layout';
-import { Stack } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useTheme, useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useTheme } from '@react-navigation/native';
+import { Stack } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
+import { FlatList, StatusBar, StyleSheet, Text, View } from 'react-native';
+import IdCardWidget from '../../components/IdCardWidget';
+import { useScpData } from '../_layout';
 import { ScpListItem } from './ScpListItem';
-
 export default function FavouritesScreen() {
   const scpData = useScpData();
   const { colors } = useTheme();
@@ -44,7 +44,7 @@ export default function FavouritesScreen() {
       loadStatuses();
     }, [])
   );
-
+ const readCount = readStatus.filter(Boolean).length;
   // 🔍 Sadece kaydedilenleri filtrele
   const filteredData = scpData.filter((item) => {
     const codeNumber = parseInt(item.code.replace('SCP-', ''), 10);
@@ -64,9 +64,10 @@ export default function FavouritesScreen() {
             headerStyle: { backgroundColor: colors.background },
           }}
         />
-        <Text style={[styles.emptyText, { color: colors.text, opacity: 0.7 }]}>
-          Henüz hiçbir SCP’yi arşivlemedin. 💾  
-          Bir SCP’ye girip kalp ikonuna dokunarak favorilere ekleyebilirsin.
+       {<IdCardWidget />}
+      
+        <Text style={[styles.emptyText, { color: '#fbd501ff', marginTop: "50%", opacity: 0.7, marginVertical: "auto" }]}>
+          Favorilere eklediğiniz SCP'ler burada görünür.
         </Text>
       </View>
     );
@@ -80,21 +81,42 @@ export default function FavouritesScreen() {
         options={{
           title: 'Beğendiklerin',
           headerTitleAlign: 'left',
-          headerTitleStyle: { fontWeight: 'bold', fontSize: 24 },
+          headerTitleStyle: { fontWeight: 'bold', fontSize: 24,  },
           headerStyle: { backgroundColor: colors.background },
         }}
       />
+// satırı kaplayan bir buton ekle scpidcard.tsx' gidecek
+  
 
       <FlatList
+      
+        // Header bileşeni buraya prop olarak verilir
+        ListHeaderComponent={<IdCardWidget /> }
+        
+        // Veri seti
         data={filteredData}
+        
+        // Her öğe için benzersiz anahtar
         keyExtractor={(item) => item.code}
+        
+        // Her öğenin nasıl görüneceği
         renderItem={({ item }) => {
           const codeNumber = parseInt(item.code.replace('SCP-', ''), 10);
           const itemIndex = Number.isNaN(codeNumber) ? -1 : codeNumber - 1;
           const isRead = itemIndex >= 0 ? (readStatus[itemIndex] || false) : false;
           const isSaved = itemIndex >= 0 ? (savedStatus[itemIndex] || false) : false;
-          return <ScpListItem item={item} isRead={isRead} isSaved={isSaved} from='favourites' />;
+          
+          return (
+            <ScpListItem 
+              item={item} 
+              isRead={isRead} 
+              isSaved={isSaved} 
+              from='favourites' 
+            />
+          );
         }}
+        
+        // Liste stilleri
         contentContainerStyle={styles.listContent}
       />
     </View>

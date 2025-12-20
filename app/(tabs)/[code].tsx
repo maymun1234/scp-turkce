@@ -1,62 +1,43 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, Image, Linking, Pressable, ActivityIndicator } from 'react-native';
-import { useLocalSearchParams, Stack, router,useNavigation } from 'expo-router';
-import { useTheme } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Feather from '@expo/vector-icons/Feather';
-import { useScpData } from '../_layout';
-import {
-  PanGestureHandler,
-  State,
-  GestureHandlerRootView,
-} from 'react-native-gesture-handler';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '@react-navigation/native';
+import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, BackHandler, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import AdBanner from '../../components/AdBanner';
-
-// ✔ Kaydetme (Read Status)
-const saveReadStatus = async (list: boolean[]) => {
-  try {
-    const jsonValue = JSON.stringify(list);
-    await AsyncStorage.setItem('@readStatus', jsonValue);
-  } catch (e) {
-    console.error('Kaydedilemedi', e);
-  }
-};
-
-// ✔ Okuma (Read Status)
+import Comments from '../../components/CommentSection';
+import ImageCaption from '../../components/imageget';
+import RecommendSection from '../../components/recommendsection';
+import { HeaderScpNavigation, ScpNavigation } from '../../components/ScpNavigation';
+import { logSCPView } from '../../services/scplog';
+import { useScpData } from '../_layout';
+// ... (Buradaki saveReadStatus, loadReadStatus fonksiyonları aynı kalacak) ...
+const saveReadStatus = async (list: boolean[]) => { try { await AsyncStorage.setItem('@readStatus', JSON.stringify(list)); } catch (e) { console.error(e); } };
 const loadReadStatus = async (): Promise<boolean[]> => {
   try {
-    const jsonValue = await AsyncStorage.getItem('@readStatus');
-    return jsonValue != null ? JSON.parse(jsonValue) : new Array(6000).fill(false);
-  } catch (e) {
-    console.error('Yüklenemedi', e);
+    const v = await AsyncStorage.getItem('@readStatus');
+    // Eğer kayıt varsa parse et, yoksa boş dizi
+    const savedList = v ? JSON.parse(v) : [];
+    
+    // 6000 elemanlı, hepsi 'false' olan tertemiz bir dizi oluştur
+    const fullList = new Array(6000).fill(false);
+
+    // Kaydedilmiş verileri bu temiz dizinin üzerine yaz
+    // Bu sayede dizi her zaman 6000 elemanlı olur ve 'undefined' hatası almazsın
+    if (Array.isArray(savedList)) {
+        savedList.forEach((val, index) => {
+            if (index < 6000) fullList[index] = val;
+        });
+    }
+    return fullList;
+  } catch {
     return new Array(6000).fill(false);
   }
 };
-
-// ✔ Kaydetme (Saved Status)
-const saveSavedStatus = async (list: boolean[]) => {
-  try {
-    const jsonValue = JSON.stringify(list);
-    await AsyncStorage.setItem('@savedStatus', jsonValue);
-  } catch (e) {
-    console.error('Kaydedilemedi', e);
-  }
-};
-
-// ✔ Okuma (Saved Status)
-const loadSavedStatus = async (): Promise<boolean[]> => {
-  try {
-    const jsonValue = await AsyncStorage.getItem('@savedStatus');
-    return jsonValue != null ? JSON.parse(jsonValue) : new Array(6000).fill(false);
-  } catch (e) {
-    console.error('Yüklenemedi', e);
-    return new Array(6000).fill(false);
-  }
-};
-
+const saveSavedStatus = async (list: boolean[]) => { try { await AsyncStorage.setItem('@savedStatus', JSON.stringify(list)); } catch (e) { console.error(e); } };
+const loadSavedStatus = async (): Promise<boolean[]> => { try { const v = await AsyncStorage.getItem('@savedStatus'); return v ? JSON.parse(v) : new Array(6000).fill(false); } catch { return new Array(6000).fill(false); } };
 export default function ScpDetail() {
   const { scp, from } = useLocalSearchParams();
   const { colors } = useTheme();
@@ -66,178 +47,120 @@ export default function ScpDetail() {
 
   const [currentItem, setCurrentItem] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [readStatus, setReadStatus] = useState<boolean[]>([]);
+ const [readStatus, setReadStatus] = useState<boolean[]>(new Array(6000).fill(false));
   const [savedStatus, setSavedStatus] = useState<boolean[]>([]);
   const [isRead, setIsRead] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [autoMarkRead, setAutoMarkRead] = useState(false);
+  
+  const imageCaptionUrl = currentItem?.['image captions'] || '';
+    
+  // ... (useFocusEffect, useEffect'ler, loadStatuses vb. burası aynı kalıyor) ...
+  // ... (Kod tekrarı olmaması için ara kısımları atlıyorum, seninkilerle aynı) ...
+  
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        if (from === 'filter') router.push('/filter');
+        else if (from === 'favourites') router.push('/favourites');
+        else router.push('/');
+        return true;
+      };
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => backHandler.remove();
+    }, [from])
+  );
 
   useEffect(() => {
-    const loadAutoMarkRead = async () => {
-      try {
-        const value = await AsyncStorage.getItem('@autoMarkRead');
-        if (value !== null) {
-          setAutoMarkRead(value === 'true');
-        }
-      } catch (e) {
-        console.error('Otomatik okundu ayarı yüklenemedi', e);
-      }
-    };
-    loadAutoMarkRead();
+     // ... (loadAutoMarkRead ve scp parametre işleme kodları aynı) ...
+     const loadAutoMarkRead = async () => {
+        try {
+          const value = await AsyncStorage.getItem('@autoMarkRead');
+          if (value !== null) setAutoMarkRead(value === 'true');
+          else { setAutoMarkRead(true); await AsyncStorage.setItem('@autoMarkRead', 'true'); }
+        } catch (e) { setAutoMarkRead(true); }
+      };
+      loadAutoMarkRead();
   }, []);
 
-  // İlk yükleme - parametreden gelen veriyi kullan
   useEffect(() => {
     let scpParam: string | null = null;
-
-    if (Array.isArray(scp)) {
-      scpParam = scp[0];
-    } else if (typeof scp === 'string') {
-      scpParam = scp;
-    }
+    if (Array.isArray(scp)) scpParam = scp[0];
+    else if (typeof scp === 'string') scpParam = scp;
 
     if (scpParam) {
-      try {
-        const parsedItem = JSON.parse(scpParam);
-        setCurrentItem(parsedItem);
-      } catch (e) {
-        console.log("JSON parse hatası, 'loadNewScp' ile yükleniyor:", scpParam);
-        loadNewScp(scpParam);
-      }
-    } else {
-      console.error("SCP parametresi bulunamadı.");
+      try { setCurrentItem(JSON.parse(scpParam)); } 
+      catch (e) { loadNewScp(scpParam); }
     }
   }, [scp]);
 
-  // ✅ currentItem değiştiğinde scroll'u en üste al
   useEffect(() => {
-    if (currentItem) {
-      // Kısa bir gecikme ile scroll'u en üste al (render tamamlansın diye)
-      setTimeout(() => {
-        scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-      }, 100);
-    }
+    if (currentItem) setTimeout(() => { scrollViewRef.current?.scrollTo({ y: 0, animated: false }); }, 100);
   }, [currentItem]);
 
-  const scpIndex = currentItem && currentItem.code 
-    ? parseInt(currentItem.code.replace(/[^0-9]/g, ''), 10) - 1 
-    : -1;
+  const scpIndex = currentItem && currentItem.code ? parseInt(currentItem.code.replace(/[^0-9]/g, ''), 10) - 1 : -1;
   const scpNumber = scpIndex + 1;
-  const shouldShowAd = scpNumber > 0 && scpNumber % 3 === 0;
 
-  // Load read and saved status on mount
   useEffect(() => {
     Promise.all([loadReadStatus(), loadSavedStatus()]).then(([read, saved]) => {
-      setReadStatus(read);
-      setSavedStatus(saved);
+      setReadStatus(read); setSavedStatus(saved);
     });
   }, []);
 
-  // Update isRead and isSaved when status or scpIndex changes
   useEffect(() => {
     if (scpIndex >= 0) {
-      if (readStatus.length > scpIndex) {
-        setIsRead(readStatus[scpIndex]);
-      }
-      if (savedStatus.length > scpIndex) {
-        setIsSaved(savedStatus[scpIndex]);
-      }
+      if (readStatus.length > scpIndex) setIsRead(readStatus[scpIndex]);
+      if (savedStatus.length > scpIndex) setIsSaved(savedStatus[scpIndex]);
     }
   }, [readStatus, savedStatus, scpIndex]);
 
-  // Otomatik okundu işaretle
   useEffect(() => {
     if (autoMarkRead && scpIndex >= 0 && currentItem) {
-      const timer = setTimeout(() => {
-        markreadAsRead();
-      }, 1000);
-
+      const timer = setTimeout(() => { markreadAsRead(); }, 1000);
       return () => clearTimeout(timer);
     }
   }, [currentItem, scpIndex, autoMarkRead]);
 
-  const toggleRead = async () => {
-    if (scpIndex < 0) return;
-    const newStatus = [...readStatus];
-    newStatus[scpIndex] = !newStatus[scpIndex];
-    setReadStatus(newStatus);
-    await saveReadStatus(newStatus);
-  };
-
-  const markreadAsRead = async () => {
-    if (scpIndex < 0) return;
-    const newStatus = [...readStatus];
-    newStatus[scpIndex] = true;
-    setReadStatus(newStatus);
-    await saveReadStatus(newStatus);
-  };
-
-  const toggleSaved = async () => {
-    if (scpIndex < 0) return;
-    const newStatus = [...savedStatus];
-    newStatus[scpIndex] = !newStatus[scpIndex];
-    setSavedStatus(newStatus);
-    await saveSavedStatus(newStatus);
-  };
+  const toggleRead = async () => { /* ... aynı ... */ if(scpIndex < 0) return; const n = [...readStatus]; n[scpIndex] = !n[scpIndex]; setReadStatus(n); await saveReadStatus(n); };
+  const markreadAsRead = async () => { /* ... aynı ... */ if(scpIndex < 0) return; const n = [...readStatus]; n[scpIndex] = true; setReadStatus(n); await saveReadStatus(n); };
+  const toggleSaved = async () => { /* ... aynı ... */ if(scpIndex < 0) return; const n = [...savedStatus]; n[scpIndex] = !n[scpIndex]; setSavedStatus(n); await saveSavedStatus(n); if (currentItem?.code) logSCPView(currentItem.code, "love_toggle"); };
 
   const loadNewScp = async (newScpCode: string) => {
-    if (!scpData || scpData.length === 0) {
-      console.warn('scpData henüz yüklenmedi');
-      return;
-    }
-
+    if (!scpData || scpData.length === 0) return;
     setIsLoading(true);
-
+    
     try {
       const found = scpData.find(item => item.code === newScpCode);
-
+      
       if (found) {
-        setCurrentItem(found);
+        // ESKİ KOD (Hatalı olan):
+        // setCurrentItem(found); 
+
+        // YENİ KOD (Doğrusu):
+        // State'i elle değiştirmek yerine Router parametrelerini güncelliyoruz.
+        // Bu sayede URL değişiyor, router geçmişi senkronize oluyor
+        // ve yukarıdaki useEffect([scp]) otomatik tetiklenip currentItem'ı güncelliyor.
+        router.setParams({
+           code: found.code,
+           scp: JSON.stringify(found)
+        });
       } else {
-        setCurrentItem({
-          code: newScpCode,
-          title: 'Bulunamadı',
-          text: `SCP "${newScpCode}" listede yok.\n\nToplam ${scpData.length} SCP yüklendi.`,
+        // Eğer listede yoksa manuel state set edilebilir (fallback)
+        setCurrentItem({ 
+           code: newScpCode, 
+           title: 'Bulunamadı', 
+           text: `SCP "${newScpCode}" listede yok.` 
         });
       }
-    } catch (error) {
-      console.error('SCP bulunurken hata:', error);
-      setCurrentItem({
-        code: newScpCode,
-        title: 'Hata',
-        text: 'Bir hata oluştu.',
-      });
-    } finally {
-      setIsLoading(false);
+    } catch (error) { 
+      console.error(error); 
+    } finally { 
+      setIsLoading(false); 
     }
   };
 
-  const goToPrevious = () => {
-    if (scpNumber > 1) {
-      const prevNumber = scpNumber - 1;
-      const prevCode = `SCP-${String(prevNumber).padStart(3, '0')}`;
-      loadNewScp(prevCode);
-    }
-  };
-
-  const goToNext = () => {
-    if (scpNumber < 6000) {
-      const nextNumber = scpNumber + 1;
-      const nextCode = `SCP-${String(nextNumber).padStart(3, '0')}`;
-      loadNewScp(nextCode);
-    }
-  };
-
-  if (!currentItem) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#c0392b" />
-        <Text style={[styles.errorText, { color: colors.text, marginTop: 16 }]}>
-          Yükleniyor...
-        </Text>
-      </View>
-    );
-  }
+  
+  if (!currentItem) return <View style={[styles.container, { backgroundColor: colors.background, justifyContent:'center', alignItems:'center' }]}><ActivityIndicator size="large" color="#c0392b" /><Text style={{color:colors.text, marginTop:16}}>Yükleniyor...</Text></View>;
   
   const rawText = currentItem.text || '';
   const match = rawText.match(/Nesne\s*Sınıfı:\s*([^\n]+)/i);
@@ -248,15 +171,15 @@ export default function ScpDetail() {
   else if (/euclid|öklid/i.test(objectClass)) classColor = '#ffd60a';
   else if (/keter|tehlikeli/i.test(objectClass)) classColor = '#ff3b30';
 
-  const navigation = useNavigation();
   const cleanedText = rawText
-    .replace(/^Öğe|Madde\s*#:\s*SCP-\d+\s*/i, '')
-    .replace(/^Item\s*#:\s*SCP-\d+\s*/i, '')
-    .replace(/Nesne\s*Sınıfı:\s*[^\n]+\n?/i, '')
-    .replace(/#:\s*SCP-\d+/gi, '')
-    .replace(/«\s*SCP-\d+\s*\|\s*SCP-\d+\s*\|\s*SCP-\d+\s*»/gi, '')
-    .replace(/\n/g, '\n\n')
-    .replace(/^\s+/g, '');
+    .replace(/^Öğe|Madde\s*#:\s*SCP-\d+\s*/i, '').replace(/^Item\s*#:\s*SCP-\d+\s*/i, '').replace(/Nesne\s*Sınıfı:\s*[^\n]+\n?/i, '').replace(/"Nesne\s*Sınıfı:\s*[^\n]+\n?/i, '').replace(/#:\s*SCP-\d+/gi, '').replace(/«\s*SCP-\d+\s*\|\s*SCP-\d+\s*\|\s*SCP-\d+\s*»/gi, '').replace(/\n/g, '\n\n').replace(/^\s+/g, '');
+
+  // ✅ TAGLERİ PARÇALA VE HAZIRLA
+  // String olarak gelen "euclid canlı ..." yapısını diziye çeviriyoruz.
+  // "_" ile başlayanlar (örn: _cc) sistem etiketidir, onları göstermiyoruz.
+  const tagsList = currentItem.tags 
+    ? currentItem.tags.split(' ').filter((t: string) => !t.startsWith('_') && t.trim() !== '') 
+    : [];
 
   return (
     <>
@@ -265,321 +188,184 @@ export default function ScpDetail() {
         key={currentItem?.code}
         options={{
           title: currentItem.title || currentItem.code,
-          headerStyle: { 
-            backgroundColor: colors.background,
-          },
+          headerStyle: { backgroundColor: colors.background },
           headerTintColor: colors.text,
-          headerTitleStyle: {
-            fontWeight: 'bold',
-            fontSize: 18,
-          },
+          headerTitleStyle: { fontWeight: 'bold', fontSize: 18 },
           headerLeft: () => (
-            <Pressable 
-              onPress={() => {
-                if (from === 'filter') {
-                  router.push('/filter');
-                } else if (from === 'favourites') {
-                  router.push('/favourites');
-                } else {
-                  router.push('/');
-                }
-              }}
-              style={{ paddingLeft: 12 }}
-            >
-              <MaterialIcons name="arrow-back-ios" size={24} color={colors.text} />
-            </Pressable>
+             <Pressable onPress={() => { if(from==='filter') router.push('/filter'); else if(from==='favourites') router.push('/favourites'); else router.push('/'); }} style={{ paddingLeft: 12 }}>
+                <MaterialIcons name="arrow-back-ios" size={24} color={colors.text} />
+             </Pressable>
+          ),
+          headerRight: () => (
+             <View style={styles.headerRightContainer}>
+        <HeaderScpNavigation 
+           scpIndex={scpIndex} 
+           loadNewScp={loadNewScp} 
+           setIsLoading={setIsLoading} 
+        />
+      </View>
           ),
         }}
       />
       
-      {isLoading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#c0392b" />
-        </View>
-      )}
+      {isLoading && <View style={styles.loadingOverlay}><ActivityIndicator size="large" color="#c0392b" /></View>}
       
       <ScrollView 
         ref={scrollViewRef}
         style={[styles.container, { backgroundColor: colors.background }]}
         contentContainerStyle={styles.contentContainer}
       >
-        {currentItem.image && (
-          <Image 
-            source={{ uri: currentItem.image }} 
-            style={styles.image}
-            resizeMode="cover"
-          />
-        )}
+        {currentItem.image && <Image source={{ uri: currentItem.image }} style={styles.image} resizeMode="cover" />}
         
         <View style={styles.headerCard}>
           <View style={styles.titleRow}>
             <Text style={[styles.code, { color: '#ffffffff' }]}>{currentItem.code}</Text>
             <Text style={[styles.title, { color: colors.text }]}>{currentItem.title}</Text>
           </View>
-          
           <View style={styles.metaRow}>
-            {currentItem.state && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>
-                  📋 {currentItem.state.toLowerCase() === 'active' ? 'Aktif' : currentItem.state}
-                </Text>
-              </View>
-            )}
-            {currentItem.rating && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>⭐ {currentItem.rating}</Text>
-              </View>
-            )}
+            {currentItem.state && <View style={styles.badge}><Text style={styles.badgeText}>📋 {currentItem.state}</Text></View>}
+            {currentItem.rating && <View style={styles.badge}><Text style={styles.badgeText}>⭐ {currentItem.rating}</Text></View>}
           </View>
         </View>
-        {/* {shouldShowAd && <AdBanner />} */}
-       
+          {/* {shouldShowAd && <AdBanner />} */}
+           <AdBanner />
+      
+          
+         
+            
+         
+         
+         
+        {imageCaptionUrl && <ImageCaption imageUrl={imageCaptionUrl} caption="" />}
+        
         <View style={styles.contentCard}>
           <View style={styles.contentHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
               <Text style={[styles.contentTitle, { color: colors.text }]}>Sınıfı: </Text>
               <Pressable
-                onPress={() => {
-                  router.push({
-                    pathname: '/filter', 
-                    params: { class: objectClass } 
-                  });
-                }}
-                style={{
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                  borderRadius: 6,
-                  backgroundColor: classColor + '33',
-                  marginLeft: 4,
-                }}
+                onPress={() => router.push({ pathname: '/filter', params: { class: objectClass } })}
+                style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: classColor + '33', marginLeft: 4 }}
               >
                 <Text style={{ color: classColor, fontWeight: '600' }}>{objectClass}</Text>
               </Pressable>
             </View>
 
             <View style={styles.actionButtons}>
-              <Pressable
-                style={[styles.readButton, isRead && styles.readButtonActive]}
-                onPress={toggleRead}
-              >
-                <Text style={styles.readButtonText}>
-                  {isRead ? <Feather name="eye" size={25} color="#e0c00fff" /> : <Feather name="eye-off" size={25} color="#e0c00fff" />}
-                </Text>
+              <Pressable style={[styles.readButton, isRead && styles.readButtonActive]} onPress={toggleRead}>
+                <Text style={styles.readButtonText}>{isRead ? <Feather name="eye" size={25} color="#e0c00fff" /> : <Feather name="eye-off" size={25} color="#e0c00fff" />}</Text>
               </Pressable>
-              <Pressable 
-                style={[styles.saveButton, isSaved && styles.saveButtonActive]} 
-                onPress={toggleSaved}
-              >
-                <MaterialIcons
-                  name={isSaved ? "favorite" : "favorite-border"}
-                  size={25} 
-                  color="#c0392b"
-                />
+              <Pressable style={[styles.saveButton, isSaved && styles.saveButtonActive]} onPress={toggleSaved}>
+                <MaterialIcons name={isSaved ? "favorite" : "favorite-border"} size={25} color="#c0392b" />
               </Pressable>
             </View>
           </View>
 
-          <Text style={[styles.text, { color: colors.text, opacity: 0.9 }]}>
-            {cleanedText}
-          </Text>
+          <Text style={[styles.text, { color: colors.text, opacity: 0.9 }]}>{cleanedText}</Text>
         </View>
-        
         {currentItem.link && (
-          <Pressable 
-            style={styles.linkButton}
-            onPress={() => Linking.openURL(currentItem.link)}
-          >
+          <Pressable style={styles.linkButton} onPress={() => Linking.openURL(currentItem.link)}>
             <Text style={styles.linkButtonText}>🔗 Orijinal Kaynağı Görüntüle</Text>
           </Pressable>
         )}
+        {/* ✅ ETİKETLER (CHIPS) BÖLÜMÜ */}
+        {tagsList.length > 0 && (
+          <View style={styles.tagsContainer}>
+           
+            <View style={styles.tagsWrapper}>
+              {tagsList.map((tag: string, index: number) => (
+                <Pressable
+                  key={index}
+                  style={[styles.tagChip, { borderColor: "#c0392b" }]}
+                  // Filtre sayfasına parametre olarak gönderiyoruz
+                  onPress={() => router.push({ pathname: '/filter', params: { filterTag: tag } })} 
+                  // NOT: Eğer HomeScreen filtrelenecekse '/' ye, özel bir filtre ekranı varsa '/filter' a yönlendir.
+                  // Ben burada HomeScreen'deki filtre yapısına göre varsayımda bulundum. 
+                  // Eğer ayrı bir '/filter' sayfan varsa pathname: '/filter' yapmalısın.
+                >
+                 
+                  <Text style={[styles.tagText, { color: colors.text }]}>{tag}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
+<ScpNavigation 
+           scpIndex={scpIndex}
+           loadNewScp={loadNewScp}
+           setIsLoading={setIsLoading}
+         />
+        <RecommendSection 
+         scpIndex={scpIndex}
+         readStatus={readStatus}  // 👈 BUNU EKLEMEYİ UNUTMA
+         />
 
-        <View style={styles.navigationContainer}>
-          <Pressable 
-            style={[styles.navButton, scpNumber <= 1 && styles.navButtonDisabled]}
-            onPress={goToPrevious}
-            disabled={scpNumber <= 1 || isLoading}
-          >
-            <Feather name="arrow-left" size={20} color="#c0392b" />
-            <Text style={styles.navButtonText}>Önceki</Text>
-          </Pressable>
-
-          <Pressable 
-            style={[styles.navButton, scpNumber >= 6000 && styles.navButtonDisabled]}
-            onPress={goToNext}
-            disabled={scpNumber >= 6000 || isLoading}
-          >
-            <Text style={styles.navButtonText}>Sonraki</Text>
-            <Feather name="arrow-right" size={20} color="#c0392b" />
-          </Pressable>
-        </View>
+        
+         <Comments scpCode={currentItem.code} />
+     
       </ScrollView>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  // ... (Eski stillerin aynı kalıyor) ...
+  headerRightContainer: {
+   paddingRight: 16,
   },
-  contentContainer: {
-    padding: 16,
-    paddingBottom: 30,
+  container: { flex: 1 },
+  contentContainer: { padding: 16, paddingBottom: 30,},
+  loadingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)', zIndex: 999 },
+  image: { width: '100%', height: 220, borderRadius: 12, marginBottom: 16 },
+  headerCard: { backgroundColor: '#c0392b', borderRadius: 12, padding: 16, paddingBottom: 5, marginBottom: 12, borderWidth: 0, borderColor: '#48484a' },
+  titleRow: { marginBottom: 12 },
+  code: { fontSize: 16,  marginBottom: 4, fontFamily: 'Inter-Black', color: '#8b2c21ff' },
+  title: { fontSize: 32,fontFamily: 'Inter-Black', lineHeight: 38 },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 0 },
+  badge: { backgroundColor: '#8b2c21ff', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 15 },
+  badgeText: { color: '#ffffff', fontSize: 13, fontWeight: '600' },
+  contentCard: { borderRadius: 12, padding: 16, paddingHorizontal: 0, marginBottom: 12, borderWidth: 1, fontFamily:"Inter-Regular" }, // contentCard'ın borderWidth'i 1 olduğundan emin ol, tema rengi gelecek.
+  contentHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 },
+  contentTitle: { fontSize: 18, fontWeight: 'bold',  },
+  actionButtons: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  saveButton: { paddingHorizontal: 12, paddingVertical: 6, justifyContent: 'center', alignItems: 'center' },
+  saveButtonActive: { backgroundColor: 'transparent' },
+  readButton: { backgroundColor: 'transparent', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  readButtonActive: { backgroundColor: 'transparent' },
+  readButtonText: { color: '#ffffff', fontSize: 12, fontWeight: '600' },
+  text: { fontSize: 16, lineHeight: 25, marginTop: 8, },
+  linkButton: { backgroundColor: '#c0392b', padding: 16, borderRadius: 12, alignItems: 'center', marginBottom: 16 },
+  linkButtonText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
+  
+  errorTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 8, textAlign: 'center' },
+  errorText: { fontSize: 16, textAlign: 'center' },
+
+  // ✅ YENİ EKLENEN STİLLER
+  tagsContainer: {
+    marginBottom: 20,
+    paddingHorizontal: 4,
   },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    zIndex: 999,
-  },
-  image: {
-    width: '100%',
-    height: 220,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  headerCard: {
-    backgroundColor: '#c0392b',
-    borderRadius: 12,
-    padding: 16,
-    paddingBottom: 5,
-    marginBottom: 12,
-    borderWidth: 0,
-    borderColor: '#48484a',
-  },
-  titleRow: {
-    marginBottom: 12,
-  },
-  code: {
+  tagsHeader: {
     fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: 10,
+    opacity: 0.8,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    lineHeight: 38,
-  },
-  metaRow: {
+  tagsWrapper: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 0,
   },
-  badge: {
-    backgroundColor: '#3a3a3c',
+  tagChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 8,
-  },
-  badgeText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  contentCard: {
-    borderRadius: 12,
-    padding: 16,
-    paddingHorizontal: 0,
-    marginBottom: 12,
+    borderRadius: 20,
     borderWidth: 1,
+    backgroundColor: 'transparent', 
   },
-  contentHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  contentTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
-  },
-  saveButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  saveButtonActive: {
-    backgroundColor: 'transparent',
-  },
-  readButton: {
-    backgroundColor: 'transparent',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  readButtonActive: {
-    backgroundColor: 'transparent',
-  },
-  readButtonText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  text: {
-    fontSize: 16,
-    lineHeight: 24,
-    marginTop: 8,
-  },
-  linkButton: {
-    backgroundColor: '#c0392b',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  linkButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  navigationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginTop: 8,
-  },
-  navButton: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#c0392b',
-  },
-  navButtonDisabled: {
-    opacity: 0.4,
-  },
-  navButtonText: {
-    color: '#ffffff',
+  tagText: {
     fontSize: 15,
-    fontWeight: '600',
-  },
-  errorTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  errorText: {
-    fontSize: 16,
-    textAlign: 'center',
-  },
+    fontWeight: '500',
+  }
 });

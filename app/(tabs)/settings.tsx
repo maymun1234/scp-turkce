@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, StatusBar, Alert, Linking, Image, Switch } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Stack } from 'expo-router';
-import { useTheme } from '@react-navigation/native';
 import Feather from '@expo/vector-icons/build/Feather';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '@react-navigation/native';
+import { Stack, router } from 'expo-router';
+import React, { useCallback, useState, } from 'react';
+import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { loadInitialSettings, resetReadAndSavedStatus, saveSetting, } from '../../contexts/SettingsContext'; // Yeni dosyanızı import edin
 export default function SettingsScreen() {
   const { colors } = useTheme();
   const [isResetting, setIsResetting] = useState(false);
@@ -13,39 +13,129 @@ export default function SettingsScreen() {
 
 
 
-    const [autoMarkRead, setAutoMarkRead] = useState(false);
+    const [autoMarkRead, setAutoMarkRead] = useState(true);
+    const [autoDownloadImages, setAutoDownloadImages] = useState(true);
+    const [showCommentSection, setShowCommentSection] = useState(true);
 
+    const [skipReadedItems, setSkipReadedItems] = useState(true); // ✅ Yeni ayar
+
+    const [allowDataCollection, setAllowDataCollection] = useState(true);
   // İlk açılışta kaydedilmiş değeri yükle
-  React.useEffect(() => {
-    (async () => {
-      try {
-        const saved = await AsyncStorage.getItem('@autoMarkRead');
-        if (saved !== null) {
-          setAutoMarkRead(saved === 'true');
-        }
-      } catch (e) {
-        console.error('Auto mark load error:', e);
-      }
-    })();
+
+// İlk açılışta kaydedilmiş değeri yükle - autoMarkRead için
+React.useEffect(() => {
+    const fetchSettings = async () => {
+      const initialSettings = await loadInitialSettings();
+      setAutoMarkRead(initialSettings.autoMarkRead);
+      setAutoDownloadImages(initialSettings.autoDownloadImages);
+      setSkipReadedItems(initialSettings.skipReadedItems);
+      setShowCommentSection(initialSettings.showCommentSection);
+    };
+
+
+    
+    fetchSettings();
   }, []);
 
-
-
-      const toggleAutoMarkRead = async () => {
+// İlk açılışta kaydedilmiş değeri yükle - autoDownloadImages için
+React.useEffect(() => {
+  (async () => {
     try {
-      const newValue = !autoMarkRead;
-      setAutoMarkRead(newValue);
-      await AsyncStorage.setItem('@autoMarkRead', newValue.toString());
+      const savedAutoDownload = await AsyncStorage.getItem('@autoDownloadImages');
+      if (savedAutoDownload !== null) {
+        // Daha önce kaydedilmiş bir değer varsa onu kullan
+        setAutoDownloadImages(savedAutoDownload === 'true');
+      } else {
+        // İlk açılışta varsayılan olarak true yap
+        setAutoDownloadImages(true);
+        await AsyncStorage.setItem('@autoDownloadImages', 'true');
+      }
+
+
+
+      const savedDataCollection = await AsyncStorage.getItem('@allowDataCollection');
+        if (savedDataCollection !== null) {
+            setAllowDataCollection(savedDataCollection === 'true');
+        } else {
+            // İlk kez açılıyorsa varsayılan olarak açık olsun ve kaydedelim
+            setAllowDataCollection(true);
+            await AsyncStorage.setItem('@allowDataCollection', 'true');
+        }
+
+
+
+         const showCommentSectionValue = await AsyncStorage.getItem('@showCommentSection');
+        if (showCommentSectionValue !== null) {
+            setShowCommentSection(showCommentSectionValue === 'true');
+        } else {
+            // İlk kez açılıyorsa varsayılan olarak açık olsun ve kaydedelim
+            setShowCommentSection(true);
+            await AsyncStorage.setItem('@showCommentSection', 'true');
+
+
+        }
+        const skipReadedItemsValue = await AsyncStorage.getItem('@skipReadedItems');
+        if (skipReadedItemsValue !== null) {
+            setSkipReadedItems(skipReadedItemsValue === 'true');
+        } else {
+            // İlk kez açılıyorsa varsayılan olarak açık olsun ve kaydedelim
+            setSkipReadedItems(true);
+            await AsyncStorage.setItem('@skipReadedItems', 'true');
+        }
+
+
+       
     } catch (e) {
-      console.error('Auto mark toggle error:', e);
+      console.error('Settings load error:', e);
     }
+  })();
+}, []);
+
+
+
+  const toggleAutoMarkRead = useCallback(async () => {
+    const newValue = !autoMarkRead;
+    setAutoMarkRead(newValue);
+    await saveSetting('@autoMarkRead', newValue);
+  }, [autoMarkRead]);
+
+  // Otomatik resim indir ayarını değiştirme
+  const toggleAutoDownloadImages = useCallback(async () => {
+    const newValue = !autoDownloadImages;
+    setAutoDownloadImages(newValue);
+    await saveSetting('@autoDownloadImages', newValue);
+  }, [autoDownloadImages]);
+
+
+
+  const toggleshowCommentSection = useCallback(async () => {
+    const newValue = !showCommentSection;
+    setShowCommentSection(newValue);
+    await saveSetting('@showCommentSection', newValue);
+  }, [showCommentSection]);
+  const toggleAllowDataCollection = useCallback(async () => {
+    const newValue = !allowDataCollection;
+    setAllowDataCollection(newValue);
+    // Hem AsyncStorage'a hem de varsa context'e kaydedelim
+    await AsyncStorage.setItem('@allowDataCollection', String(newValue));
+    // Eğer saveSetting global bir fonksiyon ise onu da kullanabilirsin:
+    // await saveSetting('@allowDataCollection', newValue); 
+  }, [allowDataCollection]);
+
+
+  const toggleSkipReadedItems = async () => {
+    const newValue = !skipReadedItems;
+    setSkipReadedItems(newValue);
+    await AsyncStorage.setItem('@skipreadeditems', String(newValue));
   };
+
+
 
   // Okuma kayıtlarını sıfırla
   const handleResetReadStatus = async () => {
     Alert.alert(
       'Okuma Kayıtlarını Sıfırla',
-      'Tüm okuma kayıtlarınız silinecek. Bu işlem geri alınamaz. Devam etmek istiyor musunuz?',
+      'Okunanlar listesi ve favorileriniz silinecek. Ayarlarınız (tema vb.) korunacaktır. Devam etmek istiyor musunuz?',
       [
         {
           text: 'İptal',
@@ -57,11 +147,28 @@ export default function SettingsScreen() {
           onPress: async () => {
             setIsResetting(true);
             try {
-              await AsyncStorage.removeItem('@readStatus');
-              await AsyncStorage.removeItem('@savedStatus');
-              Alert.alert('Başarılı', 'Tüm okuma kayıtları silindi.');
+              // ✅ DOĞRUSU: Manager'daki merkezi fonksiyonu çağırıyoruz.
+              // Bu fonksiyon @readStatus ve @savedStatus anahtarlarını güvenle siler.
+              await resetReadAndSavedStatus();
+              
+              Alert.alert('Başarılı', 'Okuma geçmişi ve favoriler temizlendi.',
+                [
+                  {
+                    text: 'Tamam',
+                    onPress: () => {
+                      // ✅ SİHİRLİ KISIM BURASI:
+                      // router.back() yerine router.dismissAll() ve replace('/') kullanıyoruz.
+                      // Bu, arkadaki tüm açık sayfaları (ScpDetail dahil) öldürür.
+                      if (router.canDismiss()) {
+                        router.dismissAll();
+                      }
+                      router.replace('/'); 
+                    }
+                  }
+                ]
+              );
             } catch (e) {
-              Alert.alert('Hata', 'Okuma kayıtları sıfırlanırken bir hata oluştu.');
+              Alert.alert('Hata', 'Sıfırlama sırasında bir sorun oluştu.');
               console.error('Reset error:', e);
             } finally {
               setIsResetting(false);
@@ -90,19 +197,18 @@ export default function SettingsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle="light-content" />
+      
+      
       <Stack.Screen
         options={{
-          headerShown: false,
+          headerShown: true,
+          headerStyle: { backgroundColor: colors.background },
         }}
       />
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Ayarlar</Text>
-          
-        </View>
+        
 
         {/* Veri Yönetimi */}
         <View style={styles.section}>
@@ -113,7 +219,7 @@ export default function SettingsScreen() {
     
 
     {/* Bölücü çizgi */}
-    <View style={styles.divider} />
+    
 
     {/* Otomatik okundu işaretle */}
     <Pressable
@@ -142,6 +248,109 @@ export default function SettingsScreen() {
   value={autoMarkRead}
 />
     </Pressable>
+    {/* Bölücü çizgi */}
+
+
+{/* Otomatik resim indir */}
+<Pressable
+  style={({ pressed }) => [
+    styles.settingItem,
+    pressed && styles.settingItemPressed,
+  ]}
+  onPress={toggleAutoDownloadImages}
+>
+  <View style={styles.settingItemLeft}>
+    <View style={[styles.iconContainer, { backgroundColor: '#27ae60' }]}>
+      <Feather name="download" size={18} color="#ffffffff" />
+    </View>
+    <View style={styles.settingTextContainer}>
+      <Text style={[styles.settingText, { color: colors.text }]}>
+        Resimleri Otomatik İndir
+      </Text>
+    
+    </View>
+  </View>
+  <Switch
+    trackColor={{ false: '#767577', true: '#27ae60' }}
+    thumbColor={autoDownloadImages ? '#ffffff' : '#f4f3f4'}
+    ios_backgroundColor="#3e3e3e"
+    onValueChange={toggleAutoDownloadImages}
+    value={autoDownloadImages}
+  />
+</Pressable>
+
+
+
+
+
+<Pressable
+  style={({ pressed }) => [
+    styles.settingItem,
+    pressed && styles.settingItemPressed,
+  ]}
+  onPress={toggleshowCommentSection}
+>
+  <View style={styles.settingItemLeft}>
+    <View style={[styles.iconContainer, { backgroundColor: '#27ae60' }]}>
+      <Feather name="message-circle" size={18} color="#ffffffff" />
+    </View>
+    <View style={styles.settingTextContainer}>
+      <Text style={[styles.settingText, { color: colors.text }]}>
+        Yorumları göster
+      </Text>
+    
+    </View>
+  </View>
+  <Switch
+    trackColor={{ false: '#767577', true: '#27ae60' }}
+    thumbColor={showCommentSection ? '#ffffff' : '#f4f3f4'}
+    ios_backgroundColor="#3e3e3e"
+    onValueChange={toggleshowCommentSection}
+    value={showCommentSection}
+  />
+</Pressable>
+<Pressable
+              style={({ pressed }) => [styles.settingItem, pressed && styles.settingItemPressed]}
+              onPress={toggleAllowDataCollection}
+            >
+              <View style={styles.settingItemLeft}>
+                {/* Mavi renkli bir Activity ikonu kullandık */}
+                <View style={[styles.iconContainer, { backgroundColor: '#27ae60' }]}>
+                  <Feather name="activity" size={18} color="#ffffff" />
+                </View>
+                <View style={styles.settingTextContainer}>
+                  <Text style={[styles.settingText, { color: colors.text }]}>
+                    Kullanım Verilerini Paylaş
+                  </Text>
+                  <Text style={styles.settingSubtext}>
+                    Geliştirme için anonim log kaydı
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                trackColor={{ false: '#767577', true: '#27ae60' }}
+                thumbColor={allowDataCollection ? '#ffffff' : '#f4f3f4'}
+                ios_backgroundColor="#3e3e3e"
+                onValueChange={toggleAllowDataCollection}
+                value={allowDataCollection}
+              />
+            </Pressable>
+
+    <Pressable style={({ pressed }) => [styles.settingItem, pressed && styles.settingItemPressed]} onPress={toggleSkipReadedItems}>
+              <View style={styles.settingItemLeft}>
+                <View style={[styles.iconContainer, { backgroundColor: '#27ae60' }]}>
+                  <Feather name="fast-forward" size={18} color="#ffffff" />
+                </View>
+                <View style={styles.settingTextContainer}>
+                  <Text style={[styles.settingText, { color: colors.text }]}>Okunmuşları Atla</Text>
+   
+                </View>
+              </View>
+              <Switch trackColor={{ false: '#767577', true: '#27ae60' }} thumbColor={skipReadedItems ? '#ffffff' : '#f4f3f4'} onValueChange={toggleSkipReadedItems} value={skipReadedItems} />
+            </Pressable>
+
+
+
     <Pressable
       style={({ pressed }) => [
         styles.settingItem,
@@ -180,7 +389,7 @@ export default function SettingsScreen() {
               onPress={() => openLink('https://scp-wiki.wikidot.com/', 'SCP Wiki')}
             >
               <View style={styles.settingItemLeft}>
-                <View style={[styles.iconContainer, { backgroundColor: '#007aff' }]}>
+                <View style={[styles.iconContainer, { backgroundColor: '#e74c3c' }]}>
                   <Feather name="globe" size={18} color="#ffffffff" />
                 </View>
                 <View style={styles.settingTextContainer}>
@@ -193,7 +402,6 @@ export default function SettingsScreen() {
               <Text style={styles.settingArrow}>›</Text>
             </Pressable>
 
-            <View style={styles.divider} />
 
             <Pressable 
               style={({ pressed }) => [
@@ -231,7 +439,7 @@ export default function SettingsScreen() {
               onPress={() => openLink('mailto:bercan12345@yahoo.com', 'E-posta')}
             >
               <View style={styles.settingItemLeft}>
-                <View style={[styles.iconContainer, { backgroundColor: '#34c759' }]}>
+                <View style={[styles.iconContainer, { backgroundColor: '#e74c3c' }]}>
                   <Feather name="mail" size={18} color="#ffffffff" />
                 </View>
                 <View style={styles.settingTextContainer}>
@@ -244,7 +452,7 @@ export default function SettingsScreen() {
               <Text style={styles.settingArrow}>›</Text>
             </Pressable>
 
-            <View style={styles.divider} />
+          
 
             <Pressable 
               style={({ pressed }) => [
@@ -254,7 +462,7 @@ export default function SettingsScreen() {
               onPress={() => openLink('https://github.com/yourusername/scp-app/issues', 'GitHub')}
             >
               <View style={styles.settingItemLeft}>
-                <View style={[styles.iconContainer, { backgroundColor: '#f1c40f' }]}>
+                <View style={[styles.iconContainer, { backgroundColor: '#e74c3c' }]}>
                    <Feather name="type" size={18} color="#ffffffff" />
                 </View>
                 <View style={styles.settingTextContainer}>
@@ -289,15 +497,14 @@ export default function SettingsScreen() {
                   <Text style={[styles.settingText, { color: colors.text }]}>
                     Gizlilik Sözleşmesi
                   </Text>
-                  <Text style={styles.settingSubtext}>
-                    Hiçbir şekilde verilerinize dokunmuyoruz.
-                  </Text>
+                 
                 </View>
               </View>
               <Text style={styles.settingArrow}>›</Text>
             </Pressable>
 
-            <View style={styles.divider} />
+           
+
 
             <Pressable 
               style={({ pressed }) => [
@@ -322,7 +529,7 @@ export default function SettingsScreen() {
               <Text style={styles.settingArrow}>›</Text>
             </Pressable>
 
-            <View style={styles.divider} />
+        
 
             <Pressable 
               style={({ pressed }) => [
@@ -363,6 +570,9 @@ export default function SettingsScreen() {
           <Text style={[styles.appInfoCopyright, { color: colors.text }]}>
             © 2025 Bercan Aydın
           </Text>
+          <Text style={[styles.appInfoCopyright, { color: colors.text }]}>
+          Büşra Deler'e bol teşekkürler
+          </Text>
           <Text style={[styles.appInfoLicense, { color: colors.text }]}>
             Tüm çeviriler Gemini Pro ve ekibimiz tarafından çevrilmiştir.
           </Text>
@@ -377,6 +587,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    fontFamily: 'Inter-Regular',
   },
   scrollView: {
     flex: 1,
@@ -385,6 +596,7 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingHorizontal: 20,
     paddingBottom: 25,
+    position: 'fixed',
   },
   headerTitle: {
     fontSize: 34,
@@ -423,7 +635,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: 16,
   },
   settingItemPressed: {
@@ -437,20 +649,21 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 36,
     height: 36,
-    borderRadius: 8,
+    borderRadius: 5,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   settingIcon: {
     fontSize: 18,
+    
   },
   settingTextContainer: {
     flex: 1,
   },
   settingText: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 14,
+   fontFamily: 'Inter-Medium',
     marginBottom: 2,
   },
   settingSubtext: {
@@ -463,11 +676,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontWeight: '300',
   },
-  divider: {
-    height: 0.5,
-    backgroundColor: '#48484a',
-    marginLeft: 64,
-  },
+ 
   appInfoCard: {
     alignItems: 'center',
     paddingVertical: 40,
