@@ -1,9 +1,10 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import { Feather, Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function IdCardWidget() {
   const router = useRouter();
@@ -16,63 +17,89 @@ export default function IdCardWidget() {
 
   useFocusEffect(
     useCallback(() => {
+      let isActive = true;
       const loadData = async () => {
         try {
           const savedData = await AsyncStorage.getItem('@scp_card_data');
-          if (savedData !== null) {
+          if (savedData !== null && isActive) {
             setUserData(JSON.parse(savedData));
           }
         } catch (e) {
-          console.error(e);
+          console.error("Veri yükleme hatası:", e);
         }
       };
       loadData();
+      return () => { isActive = false; };
     }, [])
   );
 
   return (
     <TouchableOpacity 
-      style={styles.container} 
+      style={styles.wrapper}
       onPress={() => router.push('/(tabs)/scpidcard')} 
-      activeOpacity={0.7}
+      activeOpacity={0.85}
     >
-      {/* Sol Accent Çizgisi */}
-      <View style={styles.accentStrip} />
+      <LinearGradient
+        // Ana renk olan #c0392b'den biraz daha koyu bir tona geçiş
+        colors={['#c0392b', '#8e271c']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.container}
+      >
+        {/* Desensel doku: Arkaplanda hafif karartı geçişi */}
+        <View style={styles.textureOverlay} />
 
-      {/* İçerik */}
-      <View style={styles.contentRow}>
-        <View style={styles.infoContainer}>
-          <Text style={styles.label}>KİMLİK KARTI</Text>
-          <Text style={styles.name} numberOfLines={1}>
-            {userData.name} {userData.surname}
-          </Text>
-        </View>
+        {/* Sol Vurgu Çizgisi: Kırmızı zemin üzerinde beyaz/gümüş daha şık durur */}
+        <View style={styles.accentStrip} />
 
-        <View style={styles.iconBox}>
-         
-          <Feather name="arrow-right" size={20} color="#ffffffff"  />
+        <View style={styles.contentRow}>
+          <View style={styles.infoContainer}>
+            <Text style={styles.label}>PERSONEL KİMLİĞİ</Text>
+            <Text style={styles.name} numberOfLines={1}>
+              {userData.name} {userData.surname}
+            </Text>
+          </View>
+
+          <View style={styles.iconBox}>
+            <Feather name="arrow-right" size={30} color="#ffffff" />
+          </View>
         </View>
-      </View>
+      </LinearGradient>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+   
+    marginBottom: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.5,
+    elevation: 8,
+  },
   container: {
-    height: 56, // Daha "alçak" (compact)
-    backgroundColor: '#0f0f0f', // Mat, derin siyah
+    height: 60,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#262626', // Çok ince gri çerçeve
-    borderRadius: 4, // Çok hafif yumuşatılmış köşeler (Endüstriyel his)
+    borderColor: 'c0392b', // Zeminden biraz daha koyu kırmızı border
     overflow: 'hidden',
+    position: 'relative',
+  },
+  textureOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.05)', // Çok hafif bir karartma dokusu
   },
   accentStrip: {
     width: 4,
-    height: '100%',
-    backgroundColor: '#c0392b', // SCP Kırmızısı
+    height: '60%',
+    backgroundColor: '#272727ff', // Kırmızı zemin üzerinde beyaz vurgu daha "premium" durur
+    borderRadius: 2,
+    marginLeft: 6,
+    opacity: 0.8,
   },
   contentRow: {
     flex: 1,
@@ -83,30 +110,36 @@ const styles = StyleSheet.create({
   },
   infoContainer: {
     justifyContent: 'center',
+    flex: 1,
+    marginLeft: -4,
   },
   label: {
-    color: '#c0392b', // Soluk gri etiket
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 1,
-    marginBottom: 2,
+    color: 'rgba(255, 255, 255, 0.7)', // Kırmızı üzerinde okunabilir beyaz tonu
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+    marginBottom: 1,
     textTransform: 'uppercase',
   },
   name: {
-    color: '#e0e0e0', // Kırık beyaz (göz yormaz)
-    fontSize: 18,
-    fontWeight: '600',
+    color: '#ffffff', 
+    fontSize: 17,
+    fontWeight: '700',
     letterSpacing: 0.5,
-   
+    textTransform: 'uppercase',
+    // Hafif metin gölgesi okunabilirliği artırır
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 1,
   },
   iconBox: {
-    flexDirection: 'row',
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: "transparent", // Beyaz transparan
+    justifyContent: 'center',
     alignItems: 'center',
-    opacity: 0.8,
-    backgroundColor: '#c0392b', // Çok hafif SCP kırmızısı arka plan
-     borderWidth: 1,
-    borderColor: '#262626', // Çok ince gri çerçeve
-    borderRadius: 40, // Çok hafif yumuşatılmış köşeler (Endüstriyel his)
-    padding: 6,
+    borderWidth: 0,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
 });

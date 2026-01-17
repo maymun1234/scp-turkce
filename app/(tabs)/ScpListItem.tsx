@@ -113,8 +113,10 @@ const getClassColor = (objectClass: string): string => {
   if (objectClass === 'euclid') return '#f1c40f';
   if (objectClass === 'keter') return '#e74c3c';
   if (objectClass === 'anormal insan') return '#2b1cafff';
-  
-  return '#9b59b6';
+   if (objectClass !== '') return '#9b59b6'; 
+    
+    // Sınıf hiç bulunamadıysa (Tanımsız) Gri yapalım
+    return '#8e8e93';
 };
 
 export const ScpListItem = ({ item, isRead, isSaved, from = 'index' }: ScpListItemProps) => {
@@ -194,10 +196,10 @@ export const ScpListItem = ({ item, isRead, isSaved, from = 'index' }: ScpListIt
 const styles = StyleSheet.create({
   itemContainer: {
     padding: 16,
-    marginBottom: 10,
+    marginBottom: 9,
 
     marginTop: 8,
-    borderRadius: 0,
+    borderRadius: 10,
     borderWidth: 0,
      backgroundColor: '#1c1c1e',
     borderColor: '#343435ff',

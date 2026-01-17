@@ -6,7 +6,7 @@ export const DEFAULT_SETTINGS = {
   autoMarkRead: true,
   autoDownloadImages: true,
   skipReadedItems: true,
-  ShowCommentSection: false,
+  ShowCommentSection: true,
   // Diğer ayarlar buraya eklenebilir
 };
 

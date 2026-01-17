@@ -77,8 +77,8 @@ export default function RecommendSection({ scpIndex, readStatus }: RecommendSect
         
         {/* Yenileme Butonu */}
         <Pressable onPress={pickRandomScps} style={styles.refreshButton}>
-          <Text style={styles.refreshText}>Yenile</Text>
-          <Feather name="refresh-cw" size={14} color="#aaa" />
+         
+          <Feather name="refresh-cw" size={18} color="#fbff05ff" />
         </Pressable>
       </View>
 
@@ -106,11 +106,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 12,
+    backgroundColor: '#1c1c1e',
      borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#333',
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    
     marginBottom: 4,
     marginTop: 20,
   },

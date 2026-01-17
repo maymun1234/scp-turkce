@@ -61,7 +61,7 @@ export default function FavouritesScreen() {
             title: 'Beğendiklerin',
             headerTitleAlign: 'left',
             headerTitleStyle: { fontWeight: 'bold', fontSize: 24 },
-            headerStyle: { backgroundColor: colors.background },
+            headerStyle: { backgroundColor: "c0392b" },
           }}
         />
        {<IdCardWidget />}
@@ -88,8 +88,8 @@ export default function FavouritesScreen() {
 // satırı kaplayan bir buton ekle scpidcard.tsx' gidecek
   
 
-      <FlatList
-      
+      <FlatList style={{paddingTop:0}}
+    
         // Header bileşeni buraya prop olarak verilir
         ListHeaderComponent={<IdCardWidget /> }
         

@@ -65,11 +65,10 @@ export default function UserStatsWidget({ readCount, totalCount = 300 }: UserSta
       <Pressable onPress={() => setModalVisible(true)}>
         <View style={[styles.pillContainer, { borderColor: color }]}>
           {/* İlerleme Dolgusu */}
-          <View style={[styles.progressFillLayer, { width: `${levelPercent}%`, backgroundColor: color, opacity: 0.15 }]} />
+          <View style={[styles.progressFillLayer, { width: `${levelPercent}%`, backgroundColor: color, opacity: 0.20 }]} />
           
           <View style={styles.contentLayer}>
-            <MaterialCommunityIcons name="shield-account" size={15} color={color} style={styles.iconStyle} />
-            <Text style={[styles.pillRankText, { color: color }]}>{rank}</Text>
+             <Text style={[styles.pillRankText, { color: color }]}>{rank}</Text>
             <Text style={styles.pillCountText}>{readCount}/{totalCount}</Text>
           </View>
         </View>
@@ -124,7 +123,7 @@ export default function UserStatsWidget({ readCount, totalCount = 300 }: UserSta
               onPress={() => { setModalVisible(false); router.push('/scpidcard'); }}
             >
                 <MaterialCommunityIcons name="card-account-details-outline" size={18} color={color} />
-                <Text style={[styles.editButtonText, { color: color }]}>KİMLİK KARTINA ERİŞ</Text>
+                <Text style={[styles.editButtonText, { color: color }]}>PERSONEL KARTINA ERİŞ</Text>
             </Pressable>
           </View>
         </View>
@@ -140,7 +139,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end', // Sadece içerik kadar genişlik almasını sağlar
     borderRadius: 100,
     borderWidth: 1.2,
-    marginRight: 10,
+    marginRight: 15,
     overflow: 'hidden',
     backgroundColor: '#121212',
     height: 28, // Biraz daha ince (opsiyonel)

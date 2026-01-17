@@ -5,14 +5,15 @@ import { useFocusEffect, useTheme } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import SetupTerminal from '../../components/setup';
 import { useReadCount } from '../../hooks/usereactcount';
 import { useScpData } from '../_layout';
 import { ScpListItem } from './ScpListItem';
 // 👇 AdBanner'ı import etmeyi unutma (Yolunu projene göre düzenle)
+import AdBanner from '@/components/AdBanner';
 import NetInfo from '@react-native-community/netinfo'; // 👈 1. EKLE
 import OnlineSuggestionWidget from '../../components/mainpagerecommend'; // 👈 YENİ
 
-import AdBanner from '@/components/AdBanner';
 import UserStatsWidget from '../../components/userstats'; // 👈 YENİ
 import { CONFIG } from '../../constants/config';
 // ✅ RENKLİ VE İKONLU TAG LİSTESİ
@@ -141,7 +142,7 @@ export default function HomeScreen() {
             );
           })}
         </ScrollView>
-        
+       
       </View>
 
       <FlatList
@@ -152,8 +153,9 @@ export default function HomeScreen() {
         ListHeaderComponent={
         
           <View style={{ marginBottom: 10 }}> 
+           
             {/* <AdBanner />  */}
-        <AdBanner />
+       <AdBanner />
            {activeTag === 'all' && (
                 <OnlineSuggestionWidget 
               isConnected={isConnected} 
@@ -188,9 +190,9 @@ export default function HomeScreen() {
           </View>
         }
       />
-     
+      <SetupTerminal onComplete={() => {}} />
     </View>
-    
+   
   );
 }
 

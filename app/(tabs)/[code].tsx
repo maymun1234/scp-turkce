@@ -228,9 +228,9 @@ export default function ScpDetail() {
           </View>
         </View>
           {/* {shouldShowAd && <AdBanner />} */}
-           <AdBanner />
+         <AdBanner />
       
-          
+       
          
             
          
@@ -319,12 +319,12 @@ const styles = StyleSheet.create({
   headerCard: { backgroundColor: '#c0392b', borderRadius: 12, padding: 16, paddingBottom: 5, marginBottom: 12, borderWidth: 0, borderColor: '#48484a' },
   titleRow: { marginBottom: 12 },
   code: { fontSize: 16,  marginBottom: 4, fontFamily: 'Inter-Black', color: '#8b2c21ff' },
-  title: { fontSize: 32,fontFamily: 'Inter-Black', lineHeight: 38 },
+  title: { fontSize: 26,fontFamily: 'Inter-Black', lineHeight: 38 },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 0 },
   badge: { backgroundColor: '#8b2c21ff', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 15 },
   badgeText: { color: '#ffffff', fontSize: 13, fontWeight: '600' },
-  contentCard: { borderRadius: 12, padding: 16, paddingHorizontal: 0, marginBottom: 12, borderWidth: 1, fontFamily:"Inter-Regular" }, // contentCard'ın borderWidth'i 1 olduğundan emin ol, tema rengi gelecek.
-  contentHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 },
+  contentCard: { borderRadius: 12, padding: 0, paddingHorizontal: 0, marginBottom: 12, borderWidth: 1, fontFamily:"Inter-Regular" }, // contentCard'ın borderWidth'i 1 olduğundan emin ol, tema rengi gelecek.
+  contentHeader: { flexDirection: 'row',  borderWidth: 2, borderRadius: 5,  justifyContent: 'space-between', paddingHorizontal: 4, backgroundColor:"transparent",  alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 },
   contentTitle: { fontSize: 18, fontWeight: 'bold',  },
   actionButtons: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   saveButton: { paddingHorizontal: 12, paddingVertical: 6, justifyContent: 'center', alignItems: 'center' },
