@@ -1,9 +1,11 @@
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Localization from 'expo-localization'; // Dil kontrolü için eklendi
 import React, { useEffect, useRef, useState } from 'react';
 import {
     Animated,
     Dimensions,
+    Linking, // Dış bağlantı için eklendi
     Modal,
     Platform,
     Pressable,
@@ -15,27 +17,41 @@ import {
 
 const { height } = Dimensions.get('window');
 
+// SCP Ultra linki (Burayı gerçek link ile değiştirebilirsiniz)
+const SCP_ULTRA_URL = "https://play.google.com/store/apps/details?id=com.bercanayd.scpultra"; 
+
 export default function WelcomeTerminal({ onComplete }: { onComplete: () => void }) {
-    // Kendi görünürlük durumunu kontrol etmek için dahili state
     const [isVisible, setIsVisible] = useState<boolean | null>(null);
+    const [isWrongLanguage, setIsWrongLanguage] = useState(false); // Dil kontrolü state'i
     const [text, setText] = useState('');
-    const fullText = "SISTEM AKTIF EDILIYOR...\n\nHOŞ GELDIN ARAŞTIRMACI.\n\nSCP VAKFI ARŞIVINE ERIŞIM YETKISI TANIMLANDI. BURADA BINLERCE ANOMALI DOSYASINI INCELEYEBILIR, OKUMA DURUMUNU TAKIP EDEBILIR VE ÖZELLİKLERE GÖRE FILTRELEME YAPABILIRSIN.\n\nUNUTMA: SECURE. CONTAIN. PROTECT.";
+    
+    // Dil kontrolüne göre metin seçimi
+    const fullText = isWrongLanguage 
+        ? "SYSTEM ERROR: LANGUAGE MISMATCH DETECTED.\n\nACCESS DENIED FOR LOCAL DATABASE. PLEASE USE THE INTERNATIONAL TERMINAL (SCP ULTRA) FOR ENGLISH CONTENT.\n\nREDIRECTING TO GLOBAL ARCHIVE..."
+        : "SISTEM AKTIF EDILIYOR...\n\nHOŞ GELDIN ARAŞTIRMACI.\n\nSCP VAKFI ARŞIVINE ERIŞIM YETKISI TANIMLANDI. BURADA BINLERCE ANOMALI DOSYASINI INCELEYEBILIR, OKUMA DURUMUNU TAKIP EDEBILIR VE ÖZELLİKLERE GÖRE FILTRELEME YAPABILIRSIN.\n\nUNUTMA: SECURE. CONTAIN. PROTECT.";
     
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(10)).current;
     const stampOpacity = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        // Bileşen yüklendiğinde bir kez storage kontrolü yap
         const checkStatus = async () => {
             try {
-                // Her iki değeri de paralel olarak çekiyoruz
+                // 1. Dil Kontrolü
+                const locale = Localization.getLocales()[0].languageCode;
+                if (locale !== 'tr') {
+                    setIsWrongLanguage(true);
+                    setIsVisible(true);
+                    startTypingEffect();
+                    return; // Türkçe değilse setup kontrolüne bakmadan direkt uyarıyı göster
+                }
+
+                // 2. Klasik Setup Kontrolü
                 const [completed, deviceId] = await Promise.all([
                     AsyncStorage.getItem('@setup_completed'),
                     AsyncStorage.getItem('@device_short_id')
                 ]);
 
-                // Eğer setup tamamlanmışsa VEYA bir deviceId zaten atanmışsa modalı kapat
                 if (completed === 'true' || deviceId !== null) {
                     setIsVisible(false);
                 } else {
@@ -43,12 +59,12 @@ export default function WelcomeTerminal({ onComplete }: { onComplete: () => void
                     startTypingEffect();
                 }
             } catch (e) {
-                console.error("Storage check failed", e);
-                setIsVisible(false); // Hata durumunda kullanıcıyı engellememek için kapatıyoruz
+                console.error("Initialization failed", e);
+                setIsVisible(false);
             }
         };
         checkStatus();
-    }, []);
+    }, [isWrongLanguage]); // isWrongLanguage değiştiğinde tetiklenmesi için
 
     const startTypingEffect = () => {
         let index = 0;
@@ -63,90 +79,74 @@ export default function WelcomeTerminal({ onComplete }: { onComplete: () => void
                     Animated.timing(stampOpacity, { toValue: 0.1, duration: 1000, useNativeDriver: true })
                 ]).start();
             }
-        }, 30);
+        }, 25);
     };
 
-    const handleStart = async () => {
-        try {
-            await AsyncStorage.setItem('@setup_completed', 'true');
-            setIsVisible(false); // Dahili olarak kapat
-            onComplete(); // Üst bileşene haber ver
-        } catch (e) {
-            setIsVisible(false);
+    const handleAction = async () => {
+        if (isWrongLanguage) {
+            // SCP Ultra'ya yönlendir
+            Linking.openURL(SCP_ULTRA_URL);
+        } else {
+            // Normal giriş işlemi
+            try {
+                await AsyncStorage.setItem('@setup_completed', 'true');
+                setIsVisible(false);
+                onComplete();
+            } catch (e) {
+                setIsVisible(false);
+            }
         }
     };
 
-    // Eğer kontrol henüz bitmediyse veya zaten tamamlandıysa hiçbir şey render etme
-    if (isVisible === null || isVisible === false) {
-        return null;
-    }
+    if (isVisible === null || isVisible === false) return null;
 
     return (
-        <Modal
-            visible={isVisible}
-            transparent={false}
-            animationType="fade"
-            statusBarTranslucent={true}
-        >
+        <Modal visible={isVisible} transparent={false} animationType="fade" statusBarTranslucent={true}>
             <StatusBar barStyle="light-content" backgroundColor="#000" />
-            
             <View style={styles.terminalContainer}>
                 
                 <Animated.View style={[styles.backgroundStamp, { opacity: stampOpacity }]}>
-                    <MaterialCommunityIcons name="shield-outline" size={height * 0.4} color="#dc2626" />
+                    <MaterialCommunityIcons 
+                        name={isWrongLanguage ? "alert-octagon-outline" : "shield-outline"} 
+                        size={height * 0.4} 
+                        color="#dc2626" 
+                    />
                 </Animated.View>
 
                 <View style={styles.header}>
                     <View style={styles.headerRow}>
-                        <Text style={styles.headerText}>SCP TÜRKÇE</Text>
-                        <View style={styles.liveDot} />
+                        <Text style={styles.headerText}>
+                            {isWrongLanguage ? "SYSTEM TERMINAL" : "SCP TÜRKÇE"}
+                        </Text>
+                        <View style={[styles.liveDot, isWrongLanguage && { backgroundColor: '#dc2626' }]} />
                     </View>
                     <View style={styles.scanline} />
                 </View>
 
                 <View style={styles.body}>
-                    <Text style={styles.terminalText}>
+                    <Text style={[styles.terminalText, isWrongLanguage && { color: '#dc2626' }]}>
                         {text}
                         <Text style={styles.cursor}>_</Text>
                     </Text>
                 </View>
 
                 <Animated.View style={[styles.footer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-                    <View style={styles.settingsPreview}>
-                        <View style={styles.settingsTitleRow}>
-                            <MaterialCommunityIcons name="cog" size={12} color="#666" />
-                            <Text style={styles.settingsHeader}>VARSAYILAN SİSTEM YAPILANDIRMASI:</Text>
-                        </View>
-                        
-                        <View style={styles.settingItem}>
-                            <MaterialCommunityIcons name="image-outline" size={16} color="#dc2626" />
-                            <Text style={styles.settingLabel}>RESİM GÖSTERİMİ: <Text style={styles.activeValue}>ETKIN</Text></Text>
-                        </View>
-                        
-                        <View style={styles.settingItem}>
-                            <Feather name="message-circle" size={16} color="#dc2626" />
-                            <Text style={styles.settingLabel}>PERSONEL YORUMLARI: <Text style={styles.activeValue}>GÖSTERILIYOR</Text></Text>
-                        </View>
-                        
-                        <View style={styles.settingItem}>
-                            <Feather name="eye" size={16} color="#dc2626" />
-                            <Text style={styles.settingLabel}>OKUMA TAKIBI: <Text style={styles.activeValue}>OTOMATIK</Text></Text>
-                        </View>
-                        <View style={[styles.settingsTitleRow, { marginTop: 5 }]}>
-                            <Feather name="info" size={14} color="#666" />
-                            <Text style={[styles.settingsHeader, { textTransform: 'none' }]}>Tüm özelliklere ayarlardan ulaşabilirsiniz.</Text>
-                        </View>
-                    </View>
-
                     <Pressable 
                         style={({ pressed }) => [
                             styles.startButton,
-                            pressed && styles.pressed
+                            pressed && styles.pressed,
+                            isWrongLanguage && { backgroundColor: '#dc2626' }
                         ]} 
-                        onPress={handleStart}
+                        onPress={handleAction}
                     >
-                        <Text style={styles.startButtonText}>YETKIYI ONAYLA VE GIRIŞ YAP</Text>
-                        <MaterialCommunityIcons name="fingerprint" size={24} color="#000" />
+                        <Text style={[styles.startButtonText, isWrongLanguage && { color: '#fff' }]}>
+                            {isWrongLanguage ? "OPEN SCP ULTRA (GLOBAL)" : "YETKIYI ONAYLA VE GIRIŞ YAP"}
+                        </Text>
+                        <MaterialCommunityIcons 
+                            name={isWrongLanguage ? "earth" : "fingerprint"} 
+                            size={24} 
+                            color={isWrongLanguage ? "#fff" : "#000"} 
+                        />
                     </Pressable>
                 </Animated.View>
             </View>
@@ -154,6 +154,7 @@ export default function WelcomeTerminal({ onComplete }: { onComplete: () => void
     );
 }
 
+// ... styles aynı kalabilir, sadece isWrongLanguage durumunda buton rengini değiştirdik.
 const styles = StyleSheet.create({
     terminalContainer: {
         flex: 1,

@@ -6,11 +6,11 @@ import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, BackHandler, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import AdBanner from '../../components/AdBanner';
 import Comments from '../../components/CommentSection';
 import ImageCaption from '../../components/imageget';
 import RecommendSection from '../../components/recommendsection';
 import { HeaderScpNavigation, ScpNavigation } from '../../components/ScpNavigation';
+import ShareModal from '../../components/ShareModal';
 import { logSCPView } from '../../services/scplog';
 import { useScpData } from '../_layout';
 // ... (Buradaki saveReadStatus, loadReadStatus fonksiyonları aynı kalacak) ...
@@ -52,7 +52,7 @@ export default function ScpDetail() {
   const [isRead, setIsRead] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [autoMarkRead, setAutoMarkRead] = useState(false);
-  
+    const [shareModalVisible, setShareModalVisible] = useState(false);
   const imageCaptionUrl = currentItem?.['image captions'] || '';
     
   // ... (useFocusEffect, useEffect'ler, loadStatuses vb. burası aynı kalıyor) ...
@@ -63,6 +63,7 @@ export default function ScpDetail() {
       const onBackPress = () => {
         if (from === 'filter') router.push('/filter');
         else if (from === 'favourites') router.push('/favourites');
+        else if (from === 'otherusers') router.push('/otherusers');
         else router.push('/');
         return true;
       };
@@ -166,10 +167,14 @@ export default function ScpDetail() {
   const match = rawText.match(/Nesne\s*Sınıfı:\s*([^\n]+)/i);
   const objectClass = match ? match[1].trim() : 'Bilinmiyor';
 
-  let classColor = '#ffffff';
-  if (/güvenli|safe/i.test(objectClass)) classColor = '#34c759';
-  else if (/euclid|öklid/i.test(objectClass)) classColor = '#ffd60a';
+ // Varsayılan renk (Sınıf hiç bulunamadıysa veya tanımsızsa gri olsun)
+let classColor = '#ffffff';
+  if (/safe|güvenli/i.test(objectClass)) classColor = '#34c759'; 
+  else if (/euclid|öklid/i.test(objectClass)) classColor = '#ffd60a'; 
   else if (/keter|tehlikeli/i.test(objectClass)) classColor = '#ff3b30';
+  else if (/Thaumiel/i.test(objectClass)) classColor = '#9b59b6'; // Opsiyonel: Thaumiel rengi
+  else if (/neutralized/i.test(objectClass)) classColor = '#95a5a6'; // Opsiyonel: Neutralized rengi
+
 
   const cleanedText = rawText
     .replace(/^Öğe|Madde\s*#:\s*SCP-\d+\s*/i, '').replace(/^Item\s*#:\s*SCP-\d+\s*/i, '').replace(/Nesne\s*Sınıfı:\s*[^\n]+\n?/i, '').replace(/"Nesne\s*Sınıfı:\s*[^\n]+\n?/i, '').replace(/#:\s*SCP-\d+/gi, '').replace(/«\s*SCP-\d+\s*\|\s*SCP-\d+\s*\|\s*SCP-\d+\s*»/gi, '').replace(/\n/g, '\n\n').replace(/^\s+/g, '');
@@ -228,7 +233,7 @@ export default function ScpDetail() {
           </View>
         </View>
           {/* {shouldShowAd && <AdBanner />} */}
-         <AdBanner />
+         
       
        
          
@@ -251,6 +256,9 @@ export default function ScpDetail() {
             </View>
 
             <View style={styles.actionButtons}>
+              <Pressable style={styles.iconButton} onPress={() => setShareModalVisible(true)}>
+                <Feather name="share-2" size={22} color="#34c759" />
+              </Pressable>
               <Pressable style={[styles.readButton, isRead && styles.readButtonActive]} onPress={toggleRead}>
                 <Text style={styles.readButtonText}>{isRead ? <Feather name="eye" size={25} color="#e0c00fff" /> : <Feather name="eye-off" size={25} color="#e0c00fff" />}</Text>
               </Pressable>
@@ -260,7 +268,11 @@ export default function ScpDetail() {
             </View>
           </View>
 
-          <Text style={[styles.text, { color: colors.text, opacity: 0.9 }]}>{cleanedText}</Text>
+          <Text style={[styles.text, { color: colors.text, opacity: 0.9 }]} 
+          selectable={true} 
+            selectionColor="#c0392b">
+              {cleanedText}
+              </Text>
         </View>
         {currentItem.link && (
           <Pressable style={styles.linkButton} onPress={() => Linking.openURL(currentItem.link)}>
@@ -303,6 +315,16 @@ export default function ScpDetail() {
          <Comments scpCode={currentItem.code} />
      
       </ScrollView>
+      <ShareModal 
+        visible={shareModalVisible}
+        onClose={() => setShareModalVisible(false)}
+        scpData={{
+          code: currentItem.code,
+          title: currentItem.title,
+          text: cleanedText,
+          link: currentItem.link
+        }}
+      />
     </>
   );
 }
@@ -324,8 +346,7 @@ const styles = StyleSheet.create({
   badge: { backgroundColor: '#8b2c21ff', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 15 },
   badgeText: { color: '#ffffff', fontSize: 13, fontWeight: '600' },
   contentCard: { borderRadius: 12, padding: 0, paddingHorizontal: 0, marginBottom: 12, borderWidth: 1, fontFamily:"Inter-Regular" }, // contentCard'ın borderWidth'i 1 olduğundan emin ol, tema rengi gelecek.
-  contentHeader: { flexDirection: 'row',  borderWidth: 2, borderRadius: 5,  justifyContent: 'space-between', paddingHorizontal: 4, backgroundColor:"transparent",  alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 },
-  contentTitle: { fontSize: 18, fontWeight: 'bold',  },
+ contentHeader: { flexDirection: 'row',  borderWidth: 2, borderRadius: 5,  justifyContent: 'space-between', paddingHorizontal: 4, backgroundColor:"transparent",  alignItems: 'center', marginBottom: 12, gap: 8 }, contentTitle: { fontSize: 18, fontWeight: 'bold',  },
   actionButtons: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   saveButton: { paddingHorizontal: 12, paddingVertical: 6, justifyContent: 'center', alignItems: 'center' },
   saveButtonActive: { backgroundColor: 'transparent' },
@@ -355,6 +376,8 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
+
+   iconButton: { paddingHorizontal: 8, paddingVertical: 6 },
   tagChip: {
     flexDirection: 'row',
     alignItems: 'center',

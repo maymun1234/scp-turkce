@@ -3,10 +3,10 @@ const fs = require('fs');
 
 let content = '// Auto-generated file\n';
 
-for (let i = 1; i <= 499; i++) {
+for (let i = 1; i <= 619; i++) {
   const num = String(i).padStart(3, '0');
   content += `export { default as SCP${num} } from './SCP-${num}.json';\n`;
 }
 
-fs.writeFileSync('./index.tsx', content);
+fs.writeFileSync('./index1.tsx', content);
 console.log('✅ index.ts oluşturuldu!');

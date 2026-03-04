@@ -27,11 +27,14 @@ export default function Layout() {
         },
         headerStyle: {
           backgroundColor: '#1c1c1e',
+          
         },
         tabBarButton: HapticTab,
         tabBarShowLabel: false,
         tabBarStyle: {
           justifyContent: 'center',
+          paddingTop: 3,
+         
          
         },
       }}
@@ -111,6 +114,14 @@ export default function Layout() {
       {/* Hidden Screens - Tab bar'da gösterilmez */}
       <Tabs.Screen
         name="[code]"
+        options={{
+          href: null, // Tab bar'da gösterme
+          headerShown: true, // Kendi header'ını kullanacak
+        }}
+      />
+
+      <Tabs.Screen
+        name="otherusers"
         options={{
           href: null, // Tab bar'da gösterme
           headerShown: true, // Kendi header'ını kullanacak

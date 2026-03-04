@@ -198,7 +198,8 @@ export default function ExploreScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* Arama ve Rastgele SCP */}
-      <View style={[styles.searchContainer, { backgroundColor: colors.background }]}>
+      <View style={[styles.searchContainer, { backgroundColor: "#1c1c1e" }]}>
+
         <View style={styles.searchRow}>
           {/* Search Input */}
           <View style={styles.searchInputWrapper}>
@@ -272,7 +273,7 @@ export default function ExploreScreen() {
               <Text style={[styles.dropdownButtonText, { color: colors.text }]}>
                 {selectedClass === 'Tümü' ? '📋 Nesne Sınıfı' : ` ${selectedClass} (${classCounts[selectedClass as keyof typeof classCounts]})`}
               </Text>
-              <Text style={[styles.dropdownArrow, { color: colors.text }]}>
+              <Text style={[styles.dropdownArrow, {  color: "#c0392b" }]}>
                  {showClassDropdown ? <Feather name="chevron-up" size={24} /> : <Feather name="chevron-down" size={24} />}
               </Text>
             </Pressable>
@@ -318,7 +319,7 @@ export default function ExploreScreen() {
               <Text style={[styles.dropdownButtonText, { color: colors.text }]}>
                 {readFilter === 'Tümü' ? '👁️ Okuma Durumu' : ` ${readFilter} (${readCounts[readFilter as keyof typeof readCounts]})`}
               </Text>
-              <Text style={[styles.dropdownArrow, { color: colors.text }]}>
+              <Text style={[styles.dropdownArrow, { color: "#c0392b" }]}>
                 {showReadDropdown ? <Feather name="chevron-up" size={24} /> : <Feather name="chevron-down" size={24} />}
               </Text>
             </Pressable>
@@ -371,12 +372,12 @@ export default function ExploreScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: '#3a3a3c' },
   searchContainer: { 
     paddingTop: 50, 
     paddingHorizontal: 15, 
     paddingBottom: 15, 
-    borderBottomWidth: 1, 
+    borderBottomWidth: 0, 
     borderBottomColor: '#3a3a3c', 
     backgroundColor: '#a6a6baff' 
   },
@@ -426,23 +427,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center', 
     alignItems: 'center' 
   },
-  filterWrapper: {},
+  filterWrapper: {
+    backgroundColor: '#1c1c1e',
+    paddingBottom: 10,
+  },
   listContent: { paddingHorizontal: 15, paddingBottom: 30, paddingTop: 10 },
   emptyText: { textAlign: 'center', marginTop: 40, fontSize: 16 },
   dropdownContainer: {
     flexDirection: 'row',
     gap: 12,
-    paddingHorizontal: 16,
+    marginHorizontal: 16,
   },
-  dropdownItem: { flex: 1 },
+  dropdownItem: { flex: 1,  },
   dropdownButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 10,
-    backgroundColor: '#1c1c1e',
+    borderRadius: 29,
+    backgroundColor: '#222225',
   },
   dropdownButtonText: { fontSize: 14, fontWeight: '600' },
   dropdownArrow: { fontSize: 12, marginLeft: 8 },

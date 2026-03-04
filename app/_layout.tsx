@@ -119,7 +119,7 @@ useEffect(() => {
         console.log(`SCP verisi yüklendi (${cleanedData.length} kayıt).`);
         
       } catch (e: any) { 
-        console.error("KRİTİK HATA: SCP JSON dosyaları yüklenemedi. 'catch' bloğu tetiklendi.");
+        console.error("KRİTİK HATA: SCP JSON dosyaları yüklenemedi. 'catch' bloğu tetiklendi. asset impotlarına bak");
         
         if (e.message && e.message.includes('Unable to resolve module')) {
             console.error("LÜTFEN KONTROL EDİN: 'assets/scp_jsons/' klasöründe SCP-001.json'dan SCP-010.json'a kadar tüm dosyaların bulunduğundan emin olun.");

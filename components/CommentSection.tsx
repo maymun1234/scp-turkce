@@ -6,8 +6,8 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   StyleSheet,
   Text,
@@ -15,6 +15,8 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+
+import { langCode, t } from '../constants/i18n';
 
 type CommentsProps = {
   scpCode: string;
@@ -25,6 +27,7 @@ type CommentData = {
   username: string;
   comment_text: string;
   created_at: string;
+  language?: string;
 };
 
 export default function Comments({ scpCode }: CommentsProps) {
@@ -33,20 +36,23 @@ export default function Comments({ scpCode }: CommentsProps) {
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [comments, setComments] = useState<CommentData[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Yorum yazma modalı için state
+  const [isModalVisible, setIsModalVisible] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [sending, setSending] = useState(false);
 
   const fetchComments = async () => {
-    setLoading(true); // Yenilemeye basınca loading dönsün
+    setLoading(true);
     try {
-      const url = `http://bercan.blog/pages/scp/commentcontroller.php?action=get_comments&scp_code=${scpCode}`;
+      const url = `http://bercan.blog/pages/scp/commentcontroller.php?action=get_comments&scp_code=${scpCode}&language=${langCode}`;
       const response = await fetch(url);
       const json = await response.json();
       if (json.status === 'success') {
         setComments(json.data);
       }
     } catch (error) {
-      console.error("Yorum çekme hatası:", error);
+      console.error(t('fetch_error'), error);
     } finally {
       setLoading(false);
     }
@@ -54,11 +60,11 @@ export default function Comments({ scpCode }: CommentsProps) {
 
   const handleSendComment = async () => {
     if (!newComment.trim()) {
-      Alert.alert("Hata", "Lütfen boş yorum göndermeyin.");
+      Alert.alert(t('error_title'), t('empty_comment_warning'));
       return;
     }
     if (!deviceId) {
-      Alert.alert("Hata", "Cihaz kimliği oluşturulamadı.");
+      Alert.alert(t('error_title'), t('device_id_error'));
       return;
     }
 
@@ -66,21 +72,23 @@ export default function Comments({ scpCode }: CommentsProps) {
     try {
       const encodedText = encodeURIComponent(newComment);
       const encodedUser = encodeURIComponent(deviceId);
-      const url = `http://bercan.blog/pages/scp/commentcontroller.php?action=add_comment&scp_code=${scpCode}&username=${encodedUser}&text=${encodedText}`;
+      
+      const url = `http://bercan.blog/pages/scp/commentcontroller.php?action=add_comment&scp_code=${scpCode}&username=${encodedUser}&text=${encodedText}&language=${langCode}`;
 
       const response = await fetch(url);
       const json = await response.json();
 
       if (json.status === 'success') {
-        Alert.alert("Başarılı", "Yorumunuz gönderildi ve onay sırasına alındı.");
+        Alert.alert(t('success_title'), t('send_success'));
         setNewComment("");
+        setIsModalVisible(false); // Başarılı olunca modalı kapat
         fetchComments();
       } else {
-        Alert.alert("Hata", json.message || "Yorum gönderilemedi.");
+        Alert.alert(t('error_title'), json.message || t('send_fail'));
       }
 
     } catch (error) {
-      Alert.alert("Hata", "Bağlantı hatası oluştu.");
+      Alert.alert(t('error_title'), t('connection_error'));
       console.error(error);
     } finally {
       setSending(false);
@@ -105,7 +113,7 @@ export default function Comments({ scpCode }: CommentsProps) {
             setSettingsLoaded(true);
           }
         } catch (e) {
-          console.error("Başlatma hatası", e);
+          console.error(t('init_error'), e);
         }
       };
       initialize();
@@ -123,11 +131,9 @@ export default function Comments({ scpCode }: CommentsProps) {
   if (!showCommentSection) return null;
 
   const renderComment = ({ item }: { item: CommentData }) => (
-    <View style={styles.contentCard}>
+    <View style={styles.commentCard}>
       <View style={styles.commentHeader}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{item.username}</Text>
-        </View>
+        <Text style={styles.badgeText}>{item.username}</Text>
         <Text style={styles.dateText}>{item.created_at}</Text>
       </View>
       <Text style={styles.text}>{item.comment_text}</Text>
@@ -135,196 +141,228 @@ export default function Comments({ scpCode }: CommentsProps) {
   );
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"} 
-      style={styles.container}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 80}
-    >
-      {/* 👇 GÜNCELLENEN BAŞLIK ALANI (RecommendSection ile Aynı Stil) */}
+    <View style={styles.container}>
+      {/* BAŞLIK VE YORUM EKLE BUTONU */}
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          {/* İkon: Mesaj balonu */}
           <Feather name="message-square" size={18} color="#c0392b" />
-          <Text style={styles.headerTitle}>YORUMLAR ({comments.length})</Text>
+          <Text style={styles.headerTitle}>
+            {t('comments_title')} ({comments.length})
+          </Text>
         </View>
-        
-        {/* Manuel Yenileme Butonu */}
-       
+        <TouchableOpacity 
+          style={styles.addCommentButton}
+          onPress={() => setIsModalVisible(true)}
+        >
+          <Feather name="plus" size={18} color="#fff" />
+          <Text style={styles.addCommentText}>Yaz</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Liste Alanı */}
-      <View style={{ flex: 1 }}>
-        {loading ? (
-          <ActivityIndicator size="large" color="#c0392b" style={{ marginTop: 20 }} />
-        ) : (
-          <FlatList
-            data={comments}
-            renderItem={renderComment}
-            keyExtractor={(item) => item.id.toString()}
-            ListEmptyComponent={<Text style={styles.errorText}>Kayıt bulunamadı. İlk raporu sen oluştur.</Text>}
-            contentContainerStyle={styles.listContent}
-            inverted={false} 
-          />
-        )}
-      </View>
-
-      {/* Input Alanı (Sticky Footer) */}
-      <View style={styles.inputCard}>
-        <View style={styles.commentHeader}>
-             
-          
+      {/* YORUMLAR LİSTESİ */}
+      {loading ? (
+        <ActivityIndicator size="large" color="#c0392b" style={{ marginVertical: 30 }} />
+      ) : (
+        <View style={{ paddingBottom: 20 }}>
+          {comments.length === 0 ? (
+             <Text style={styles.errorText}>{t('no_comments_msg')}</Text>
+          ) : (
+             comments.map((item) => <React.Fragment key={item.id.toString()}>{renderComment({item})}</React.Fragment>)
+          )}
         </View>
-        
-        <View style={styles.inputRow}>
+      )}
+
+      {/* YORUM YAZMA MODALI */}
+      <Modal
+        visible={isModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsModalVisible(false)}
+      >
+        <KeyboardAvoidingView 
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Yorum Bırak</Text>
+              <TouchableOpacity onPress={() => setIsModalVisible(false)} style={styles.closeButton}>
+                <Feather name="x" size={24} color="#ccc" />
+              </TouchableOpacity>
+            </View>
+            
             <TextInput
-            style={styles.input}
-            placeholder="Gözlem raporunuzu buraya girin..."
-            placeholderTextColor="#666"
-            value={newComment}
-            onChangeText={setNewComment}
-            multiline
+              style={styles.modalInput}
+              placeholder={t('input_placeholder')}
+              placeholderTextColor="#666"
+              value={newComment}
+              onChangeText={setNewComment}
+              multiline
+              autoFocus={true}
+              textAlignVertical="top" // Android'de metnin üstten başlaması için
             />
-            <TouchableOpacity
-            style={[styles.sendButton, sending && { opacity: 0.5 }]}
-            onPress={handleSendComment}
-            disabled={sending}
-            >
-            {sending ? (
-                <ActivityIndicator color="#fff" size="small" />
-            ) : (
-                <Feather name="arrow-up" size={24} color="#fff" />
-            )}
-            </TouchableOpacity>
-        </View>
-      </View>
 
-    </KeyboardAvoidingView>
+            <TouchableOpacity 
+              style={[styles.modalSendButton, sending && { opacity: 0.5 }]}
+              onPress={handleSendComment}
+              disabled={sending}
+            >
+              {sending ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <Text style={styles.modalSendText}>{t('send')}</Text>
+                  
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#050505', // Tam siyah yerine çok çok koyu gri, gözü daha az yorar
+    backgroundColor: '#050505',
+    marginTop: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#222',
+    overflow: 'hidden', // İçeriğin köşelerden taşmaması için
   },
-  listContent: {
-   
-    paddingTop: 10,
-    paddingBottom: 20,
-  },
-
-  // --- HEADER KISMI (Aynı kalabilir, güzel duruyor) ---
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    padding: 16,
     backgroundColor: '#0a0a0a', 
-    marginBottom: 0, // Header ile liste birleşsin
+    borderBottomWidth: 1,
+    borderBottomColor: '#222',
   },
   headerTitle: {
     color: '#ccc',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 'bold',
     letterSpacing: 1.5,
     textTransform: 'uppercase',
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
-  refreshButton: {
-    padding: 6,
+  addCommentButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#c0392b',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    gap: 4,
   },
-
-  // --- SADELEŞTİRİLMİŞ YORUM (LOG) SATIRI ---
-  contentCard: {
-    backgroundColor: 'transparent', // Arka plan kutusunu kaldırdık
-    borderLeftWidth: 0,             // Kalın sol çizgiyi kaldırdık
-    borderWidth: 0,                 // Çerçeveyi kaldırdık
-    borderBottomWidth: 1,           // Sadece alt çizgi
-    borderBottomColor: '#222',      // Çok silik bir ayırıcı
-    paddingVertical: 16,            // Dikey boşluğu artırdık, ferah olsun
-    paddingHorizontal: 4,
-    marginBottom: 0,                // Bloklar arası boşluğa gerek yok, çizgi ayırıyor
-    borderRadius: 0,
+  addCommentText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
-  
-  // İsim ve Tarih Satırı
+  commentCard: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1a1a1a',
+    borderLeftWidth: 3,
+    borderLeftColor: '#c0392b', // Her yoruma ince kırmızı bir çizgi
+    marginHorizontal: 10,
+    marginTop: 10,
+    backgroundColor: '#0d0d0d',
+    borderRadius: 4,
+  },
   commentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
-    borderBottomWidth: 0, // Ara çizgiyi kaldırdık
-    paddingBottom: 0,
-  },
-
-  // Kullanıcı Adı (Artık kutu değil, sadece metin)
-  badge: {
-    backgroundColor: 'transparent', // Kutu rengi gitti
-    paddingHorizontal: 0,
-    paddingVertical: 0,
+    marginBottom: 8,
   },
   badgeText: {
-    color: '#c0392b', // SCP Kırmızısı veya #f1c40f (Sarı) yapabilirsin
+    color: '#c0392b',
     fontSize: 14,
     fontWeight: 'bold',
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     letterSpacing: 0.5,
   },
-  
   dateText: {
-    color: '#555',
+    color: '#666',
     fontSize: 11,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
-
-  // Yorum Metni
   text: {
-    color: '#e0e0e0', // Daha parlak beyaz
+    color: '#d4d4d4',
     fontSize: 15,
-    lineHeight: 22, // Satır arası boşluk okumayı kolaylaştırır
+    lineHeight: 22,
     fontFamily: 'Inter',
-    opacity: 0.9,
-  },
-
-  // --- INPUT ALANI (Hala ayrışması gerekiyor) ---
-  inputCard: {
-   
-    paddingVertical: 10,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 10, // iOS Home bar için boşluk
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center', // Buton ve inputu ortalar
-    gap: 8,
-  },
-  input: {
-    flex: 1,
-    color: '#e0e0e0',
-    fontSize: 14,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    backgroundColor: '#161616', // Çok hafif bir gri ton, border yerine bunu kullandık
-    paddingHorizontal: 16,      // Yazı kenarlara yapışmasın
-    paddingTop: 12,             // Multiline için dikey ortalama ayarı
-    paddingBottom: 12,
-    minHeight: 46,              // Dokunmatik alanı genişlettik
-    maxHeight: 100,
-    borderRadius: 12,           // Tam yuvarlak (Pill shape)
-    // Borderları kaldırdık
-  },
-  sendButton: {
-    height: 46,     // Input ile aynı yükseklik
-    width: 46,      // Tam kare -> yuvarlak olacak
-    backgroundColor: '#c0392b', // SCP kırmızısı
-    borderRadius: 23, // Tam yuvarlak (Height / 2)
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   errorText: {
     color: '#666',
     textAlign: 'center',
-    marginTop: 40,
+    marginTop: 20,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
+  
+  // --- MODAL STİLLERİ ---
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)', // Arka planı hafif karartır
+  },
+  modalContent: {
+    backgroundColor: '#111',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 20,
+    minHeight: '50%', // Ekranın yarısını kaplar
+    borderTopWidth: 1,
+    borderColor: '#333',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalInput: {
+    flex: 1,
+    backgroundColor: '#0a0a0a',
+    color: '#e0e0e0',
+    fontSize: 16,
+    fontFamily: 'Inter',
+    borderRadius: 8,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#333',
+    marginBottom: 16,
+  },
+  modalSendButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#c0392b',
+    paddingVertical: 14,
+    borderRadius: 28,
+    gap: 8,
+  },
+  modalSendText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    
+    textTransform: 'uppercase',
+  }
 });

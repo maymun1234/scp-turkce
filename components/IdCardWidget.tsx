@@ -6,13 +6,17 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+// --- YENİ IMPORT ---
+import { t } from '../constants/i18n';
+
 export default function IdCardWidget() {
   const router = useRouter();
   
+  // Varsayılan değerleri çeviriden çekiyoruz
   const [userData, setUserData] = useState({
-    name: 'PERSONEL',
-    surname: 'DOSYASI',
-    role: 'Erişim Gerekli',
+    name: t('default_name'),     // 'PERSONEL' veya 'PERSONNEL'
+    surname: t('default_surname'), // 'DOSYASI' veya 'FILE'
+    role: t('default_role'),
   });
 
   useFocusEffect(
@@ -40,21 +44,19 @@ export default function IdCardWidget() {
       activeOpacity={0.85}
     >
       <LinearGradient
-        // Ana renk olan #c0392b'den biraz daha koyu bir tona geçiş
         colors={['#c0392b', '#8e271c']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.container}
       >
-        {/* Desensel doku: Arkaplanda hafif karartı geçişi */}
         <View style={styles.textureOverlay} />
-
-        {/* Sol Vurgu Çizgisi: Kırmızı zemin üzerinde beyaz/gümüş daha şık durur */}
         <View style={styles.accentStrip} />
 
         <View style={styles.contentRow}>
           <View style={styles.infoContainer}>
-            <Text style={styles.label}>PERSONEL KİMLİĞİ</Text>
+            {/* BAŞLIK ÇEVİRİSİ */}
+            <Text style={styles.label}>{t('id_card_label')}</Text>
+            
             <Text style={styles.name} numberOfLines={1}>
               {userData.name} {userData.surname}
             </Text>
@@ -71,8 +73,7 @@ export default function IdCardWidget() {
 
 const styles = StyleSheet.create({
   wrapper: {
-   
-    marginBottom: 5,
+    marginBottom: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -85,18 +86,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'c0392b', // Zeminden biraz daha koyu kırmızı border
+    borderColor: '#c0392b', // Burada '#' eksikti, düzelttim.
     overflow: 'hidden',
     position: 'relative',
   },
   textureOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.05)', // Çok hafif bir karartma dokusu
+    backgroundColor: 'rgba(0,0,0,0.05)',
   },
   accentStrip: {
     width: 4,
     height: '60%',
-    backgroundColor: '#272727ff', // Kırmızı zemin üzerinde beyaz vurgu daha "premium" durur
+    backgroundColor: '#272727ff',
     borderRadius: 2,
     marginLeft: 6,
     opacity: 0.8,
@@ -114,7 +115,7 @@ const styles = StyleSheet.create({
     marginLeft: -4,
   },
   label: {
-    color: 'rgba(255, 255, 255, 0.7)', // Kırmızı üzerinde okunabilir beyaz tonu
+    color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 8,
     fontWeight: '900',
     letterSpacing: 1.5,
@@ -127,7 +128,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
-    // Hafif metin gölgesi okunabilirliği artırır
     textShadowColor: 'rgba(0, 0, 0, 0.2)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 1,
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 8,
-    backgroundColor: "transparent", // Beyaz transparan
+    backgroundColor: "transparent",
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 0,

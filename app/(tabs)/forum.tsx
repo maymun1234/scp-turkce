@@ -421,5 +421,6 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 14,
     letterSpacing: 1,
+    
   }
 });
